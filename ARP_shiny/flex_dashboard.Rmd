@@ -1,0 +1,122 @@
+---
+title: "Political Positions of MPs in the Tunisian Parliament"
+resource_files:
+- bin_abstain.rds
+- bin_yaynay.rds
+- info_legis.rds
+- all_matrices.rds
+runtime: shiny
+output:
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: scroll
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(shiny)
+library(ggplot2)
+library(magrittr)
+library(emIRT)
+source("Ggplot2_theme.R",local=TRUE)
+source("helpers.R",local=TRUE)
+source("emIRT_graph.R",local=TRUE)
+
+data_plots <- reactive({
+      choice <- switch(input$var,"Yes vs. No"=1,"Yes/No vs. Abstain"=2)
+      return(choice)
+    })
+  subset_filter <- reactive({
+    if(!is.null(input$MP_names)) {
+      return(input$MP_names)
+  } else if("All" %in% input$parties) {
+      return(NULL)
+  } else {
+      return(input$parties)
+    }
+  })
+  subset_type_filter <- reactive({
+    if(is.null(input$MP_names)) {
+      return('party')
+    } else {
+      return('individual')
+    }
+  })
+  
+  
+
+```
+
+Estimated Models
+======================================================================
+
+Column {.sidebar}
+------------------------------------------
+Interact with a model of the Assemblee Representative du Peuple of Tunisia. This model puts Tunisian MPs on a political spectrum based on their voting record in the current parliament from Bawsala's [Marsad Majles](http://majles.marsad.tn/2014/?) data repository. It was created by [Robert Kubinec](sites.google.com/a/virginia.edu/robert-m-kubinec/) from the University of Virginia using the emIRT package in R by [Kosuke Imai, James Lo & Jonathan Olmsted, 2016](http://imai.princeton.edu/research/files/fastideal.pdf).
+
+Use the provided options to select a model that either predicts yes vs. no votes or a model that predicts whether MPs will abstain from voting. Also use the options below the chart to change the appearance of the plot. Individual data for MPs is available from the [Raw Data for MPs] tab.
+
+
+```{r}
+      selectInput("var", label = "Choose a type of vote to predict",
+                  choices = c("Yes vs. No","Yes/No vs. Abstain"),
+                  selected = "Yes vs. No")
+
+      p("A PDF version of the chart can be downloaded by clicking the button below.")
+  
+      downloadHandler(filename = 'Ideology Chart of the ARP.pdf',
+    content = function(file) {
+      ggsave(file,plot(x=model_results[[data_plots()]],legis.names=model_data[[data_plots()]]$MP,
+                                           parties=model_data[[data_plots()]]$Party,subset_name=subset_filter(),
+                      hjust_top=input$top_hjust,hjust_bottom=input$bottom_hjust,subset_type=subset_type_filter()),width=10,height=16,units="in")})
+      
+      
+      
+
+```
+
+
+Column
+-----------------------------------------
+
+### Ideology Plot {.no-title data-height=650}
+
+```{r}
+      renderPlot({ plot(x=model_results[[data_plots()]],legis.names=model_data[[data_plots()]]$MP,
+                                           parties=model_data[[data_plots()]]$Party,subset_name=subset_filter(),
+                      hjust_top=input$top_hjust,hjust_bottom=input$bottom_hjust,subset_type=subset_type_filter())},
+                 bg='transparent')
+```
+
+
+### Display Options
+```{r}
+  
+      checkboxGroupInput("parties",label="Choose a party to display",
+                  choices=c("All",party_types),
+                  selected="All",inline=TRUE)
+      
+      selectizeInput('MP_names',label="Select one or more MPs to display",choices=legis_names,multiple=TRUE)
+      sliderInput('top_hjust',"Adjust MP names' position (top);",
+                  min=-5,max=5,step=0.1,value=1.5)
+      
+      
+      sliderInput('bottom_hjust',"Adjust MP names' position (bottom)",
+                  min=-5,max=5,step=0.1,value=-0.5)
+
+```
+
+
+Raw Data for MPs
+=========================================
+
+To return to the model, go to the [Estimated Models] tab.
+
+```{r}
+DT::renderDataTable({model_data[[switch(input$var,"Yes vs. No"=1,"Yes/No vs. Abstain"=2)]]},rownames=FALSE) 
+# renderTable({model_data[[switch(input$var,"Yes vs. No"=1,"Yes/No vs. Abstain"=2)]]})
+```
+
+
+
+

@@ -1,0 +1,91 @@
+
+R version 3.1.1 (2014-07-10) -- "Sock it to Me"
+Copyright (C) 2014 The R Foundation for Statistical Computing
+Platform: x86_64-unknown-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> source("Ggplot2_theme.R")
+Loading required package: ggplot2
+> library(rstan)
+rstan (Version 2.9.0, packaged: 2016-01-05 16:17:47 UTC, GitRev: 05c3d0058b6a)
+For execution on a local, multicore CPU with excess RAM we recommend calling
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+> library(foreign)
+> library(pscl)
+Loading required package: MASS
+Loading required package: lattice
+Classes and Methods for R developed in the
+
+Political Science Computational Laboratory
+
+Department of Political Science
+
+Stanford University
+
+Simon Jackman
+
+hurdle and zeroinfl functions by Achim Zeileis
+
+> require(anominate)
+Loading required package: anominate
+Loading required package: coda
+
+Attaching package: ‘coda’
+
+The following object is masked from ‘package:rstan’:
+
+    traceplot
+
+Loading required package: wnominate
+
+## W-NOMINATE Ideal Point Package
+## Copyright 2006 -2016
+## Keith Poole, Jeffrey Lewis, James Lo, and Royce Carroll
+## Support provided by the U.S. National Science Foundation
+## NSF Grant SES-0611974
+
+Loading required package: oc
+
+## Optimal Classification Ideal Point Package
+## Copyright 2007 -2016
+## Keith Poole, Jeffrey Lewis, James Lo, and Royce Carroll
+## Support provided by the U.S. National Science Foundation
+## NSF Grant SES-0611974
+
+Loading required package: MCMCpack
+##
+## Markov Chain Monte Carlo Package (MCMCpack)
+## Copyright (C) 2003-2016 Andrew D. Martin, Kevin M. Quinn, and Jong Hee Park
+##
+## Support provided by the U.S. National Science Foundation
+## (Grants SES-0350646 and SES-0350613)
+##
+
+## alpha-NOMINATE Ideal Point Package
+## Copyright 2013 - 2016
+## Royce Carroll, Christopher Hare, Jeffrey B. Lewis, James Lo, Keith Poole, and Howard Rosenthal
+## Support provided by the U.S. National Science Foundation
+## NSF Grant SES-0611974
+
+> require(reshape2)
+Loading required package: reshape2
+> require(ggplot2)
+> 
+> sen <- read.dta("sen113kh.dta")
+Error in read.dta("sen113kh.dta") : 
+  unable to open file: 'No such file or directory'
+Execution halted

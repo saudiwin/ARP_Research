@@ -1,0 +1,438 @@
+
+R version 3.1.1 (2014-07-10) -- "Sock it to Me"
+Copyright (C) 2014 The R Foundation for Statistical Computing
+Platform: x86_64-unknown-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # Run A-Nominate on Tunisian ARP data from Bawsala
+> 
+> # Read in data
+> require(pscl)
+Loading required package: pscl
+Loading required package: MASS
+Loading required package: lattice
+Classes and Methods for R developed in the
+
+Political Science Computational Laboratory
+
+Department of Political Science
+
+Stanford University
+
+Simon Jackman
+
+hurdle and zeroinfl functions by Achim Zeileis
+
+> require(parallel)
+Loading required package: parallel
+> require(reshape2)
+Loading required package: reshape2
+> require(anominate)
+Loading required package: anominate
+Loading required package: coda
+Loading required package: wnominate
+
+## W-NOMINATE Ideal Point Package
+## Copyright 2006 -2016
+## Keith Poole, Jeffrey Lewis, James Lo, and Royce Carroll
+## Support provided by the U.S. National Science Foundation
+## NSF Grant SES-0611974
+
+Loading required package: oc
+
+## Optimal Classification Ideal Point Package
+## Copyright 2007 -2016
+## Keith Poole, Jeffrey Lewis, James Lo, and Royce Carroll
+## Support provided by the U.S. National Science Foundation
+## NSF Grant SES-0611974
+
+Loading required package: MCMCpack
+##
+## Markov Chain Monte Carlo Package (MCMCpack)
+## Copyright (C) 2003-2016 Andrew D. Martin, Kevin M. Quinn, and Jong Hee Park
+##
+## Support provided by the U.S. National Science Foundation
+## (Grants SES-0350646 and SES-0350613)
+##
+
+## alpha-NOMINATE Ideal Point Package
+## Copyright 2013 - 2016
+## Royce Carroll, Christopher Hare, Jeffrey B. Lewis, James Lo, Keith Poole, and Howard Rosenthal
+## Support provided by the U.S. National Science Foundation
+## NSF Grant SES-0611974
+
+> require(stringr)
+Loading required package: stringr
+> require(data.table)
+Loading required package: data.table
+> require(rstan)
+Loading required package: rstan
+Loading required package: ggplot2
+rstan (Version 2.9.0, packaged: 2016-01-05 16:17:47 UTC, GitRev: 05c3d0058b6a)
+For execution on a local, multicore CPU with excess RAM we recommend calling
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+
+Attaching package: ‘rstan’
+
+The following object is masked from ‘package:coda’:
+
+    traceplot
+
+> #source("C:/Users/bobku/Box Sync/Big Data/Data/R Code_preliminary implementation/R Test Data/R Scripts/Ggplot2_theme.R")
+> first_d_neg <- c('Fathi Chamkhi','Haykel Belgacem')
+> first_d_pos <- c('Belgacem Dkhili','Chaker Ayadi')
+> 
+> 
+> #raw_data2 <- read.csv('arp_votes_v2.csv',header=TRUE,stringsAsFactors = FALSE)
+> #raw_data <- read.csv('arp_votes.csv',header=TRUE,stringsAsFactors = FALSE)
+> # keep_cols <- sapply(raw_data,is.character)
+> # raw_data <- raw_data[,keep_cols]
+> raw_data2 <- readRDS('raw_data2.rds')
+> raw_data <- readRDS('raw_data.rds')
+> 
+> info_legis <- data.table(raw_data)
+> setkey(info_legis,"legis.names")
+> party_info <- data.table(raw_data2[,1:2],key = "legis.names")
+> info_legis <- party_info[info_legis]
+> info_legis <- info_legis[legis.names=='Said Aidi',Party:='Mouvement Nidaa Tounes']
+> votes <- info_legis[,3:length(info_legis),with=FALSE]
+> 
+> vote_names <- str_extract(names(votes),"N\\.[0-9][0-9]?[0-9]?\\.201[0-9]")
+> vote_names <- ifelse(is.na(vote_names),names(votes),vote_names)
+> votes_matrix <- lapply(votes,function(x) factor(x,levels = c("contre","pour"),exclude = "abstenu"))
+> votes_matrix <- as.matrix(as.data.frame(lapply(votes_matrix,function(x) as.numeric(x) - 1)))
+> row.names(votes_matrix) <- info_legis$legis.names
+> num_votes  <- apply(votes_matrix,1,sum,na.rm=TRUE)
+> names(num_votes) <- row.names(votes_matrix)
+> votes_matrix <- votes_matrix[(num_votes>(mean(num_votes)-2*sd(num_votes))),]
+> # Remove bills that have near-unaninous agreement
+> bills_agree <- apply(votes_matrix,2,mean,na.rm=TRUE)
+> votes_matrix <- votes_matrix[,((bills_agree>0.025) & (bills_agree<0.975))]
+> 
+> # put constraints into the model. For this model, one each for democrats and republicans
+> #constrain_pos <- sample(c(which(sen$party==200)),size=10)
+> constrain_pos <- c(which(row.names(votes_matrix) %in% first_d_pos))
+> #constrain_neg <- c(which(grepl('REID',row.names(votes_matrix))))
+> constrain_neg <- c(which(row.names(votes_matrix) %in% first_d_neg))
+> 
+> num_con_pos <- ifelse(is.null(constrain_pos),1,length(constrain_pos))
+> num_con_neg <- ifelse(is.null(constrain_neg),1,length(constrain_neg))
+> true_con_pos <- ifelse(is.null(constrain_pos),0,length(constrain_pos))
+> true_con_neg <- ifelse(is.null(constrain_neg),0,length(constrain_neg))
+> constrain_legis <- c(constrain_pos,constrain_neg)
+> all_legis <- 1:nrow(votes_matrix)
+> not_legis <- all_legis[-constrain_legis]
+> new_legis <- c(constrain_legis,not_legis)
+> votes_matrix <- votes_matrix[new_legis,]
+> 
+> num_legis <- nrow(votes_matrix)
+> num_bills <- ncol(votes_matrix)
+> legislator_points <- rep(1:num_legis,times=num_bills)
+> bill_points <- rep(1:num_bills,each=num_legis)
+> Y <- c(votes_matrix)
+> na_filter <- !is.na(Y)
+> Y <- Y[na_filter]
+> legislator_points <- legislator_points[na_filter]
+> bill_points <- bill_points[na_filter]
+> fileName <- "nominate.h"
+> model_code <- readChar(fileName, file.info(fileName)$size)
+> 
+> compiled_model <- stan_model(model_code=model_code,model_name="Nominate: 1 dimension")
+> sample_fit <- sampling(object=compiled_model,
++                        data = list(Y=Y, N=length(Y), num_legis=num_legis, num_bills=num_bills, ll=legislator_points,
++                                    bb=bill_points,constrain=constrain_legis,num_con_pos=num_con_pos,num_con_neg=num_con_neg,
++                                    true_con_pos=true_con_pos,true_con_neg=true_con_neg),
++                        iter=500, chains=10,warmup=250,cores=10)
+starting worker pid=48564 on localhost:11200 at 03:37:26.532
+starting worker pid=48573 on localhost:11200 at 03:37:26.712
+starting worker pid=48582 on localhost:11200 at 03:37:26.893
+starting worker pid=48591 on localhost:11200 at 03:37:27.079
+starting worker pid=48600 on localhost:11200 at 03:37:27.265
+starting worker pid=48609 on localhost:11200 at 03:37:27.450
+starting worker pid=48618 on localhost:11200 at 03:37:27.635
+starting worker pid=48627 on localhost:11200 at 03:37:27.821
+starting worker pid=48636 on localhost:11200 at 03:37:28.007
+starting worker pid=48645 on localhost:11200 at 03:37:28.191
+
+SAMPLING FOR MODEL 'Nominate: 1 dimension' NOW (CHAIN 1).
+
+Chain 1, Iteration:   1 / 500 [  0%]  (Warmup)
+SAMPLING FOR MODEL 'Nominate: 1 dimension' NOW (CHAIN 2).
+
+Chain 2, Iteration:   1 / 500 [  0%]  (Warmup)
+SAMPLING FOR MODEL 'Nominate: 1 dimension' NOW (CHAIN 3).
+
+Chain 3, Iteration:   1 / 500 [  0%]  (Warmup)
+SAMPLING FOR MODEL 'Nominate: 1 dimension' NOW (CHAIN 4).
+
+Chain 4, Iteration:   1 / 500 [  0%]  (Warmup)
+SAMPLING FOR MODEL 'Nominate: 1 dimension' NOW (CHAIN 5).
+
+Chain 5, Iteration:   1 / 500 [  0%]  (Warmup)
+SAMPLING FOR MODEL 'Nominate: 1 dimension' NOW (CHAIN 6).
+
+Chain 6, Iteration:   1 / 500 [  0%]  (Warmup)
+SAMPLING FOR MODEL 'Nominate: 1 dimension' NOW (CHAIN 7).
+
+Chain 7, Iteration:   1 / 500 [  0%]  (Warmup)
+SAMPLING FOR MODEL 'Nominate: 1 dimension' NOW (CHAIN 8).
+
+Chain 8, Iteration:   1 / 500 [  0%]  (Warmup)
+SAMPLING FOR MODEL 'Nominate: 1 dimension' NOW (CHAIN 9).
+
+Chain 9, Iteration:   1 / 500 [  0%]  (Warmup)
+SAMPLING FOR MODEL 'Nominate: 1 dimension' NOW (CHAIN 10).
+
+Chain 10, Iteration:   1 / 500 [  0%]  (Warmup)
+Chain 4, Iteration:  50 / 500 [ 10%]  (Warmup)
+Chain 1, Iteration:  50 / 500 [ 10%]  (Warmup)
+Chain 6, Iteration:  50 / 500 [ 10%]  (Warmup)
+Chain 3, Iteration:  50 / 500 [ 10%]  (Warmup)
+Chain 5, Iteration:  50 / 500 [ 10%]  (Warmup)
+Chain 7, Iteration:  50 / 500 [ 10%]  (Warmup)
+Chain 8, Iteration:  50 / 500 [ 10%]  (Warmup)
+Chain 9, Iteration:  50 / 500 [ 10%]  (Warmup)
+Chain 10, Iteration:  50 / 500 [ 10%]  (Warmup)
+Chain 2, Iteration:  50 / 500 [ 10%]  (Warmup)
+Chain 1, Iteration: 100 / 500 [ 20%]  (Warmup)
+Chain 1, Iteration: 150 / 500 [ 30%]  (Warmup)
+Chain 1, Iteration: 200 / 500 [ 40%]  (Warmup)
+Chain 1, Iteration: 250 / 500 [ 50%]  (Warmup)
+Chain 1, Iteration: 251 / 500 [ 50%]  (Sampling)
+Chain 1, Iteration: 300 / 500 [ 60%]  (Sampling)
+Chain 1, Iteration: 350 / 500 [ 70%]  (Sampling)
+Chain 4, Iteration: 100 / 500 [ 20%]  (Warmup)
+Chain 1, Iteration: 400 / 500 [ 80%]  (Sampling)
+Chain 1, Iteration: 450 / 500 [ 90%]  (Sampling)
+Chain 1, Iteration: 500 / 500 [100%]  (Sampling)# 
+#  Elapsed Time: 1237.37 seconds (Warm-up)
+#                39.53 seconds (Sampling)
+#                1276.9 seconds (Total)
+# 
+
+Chain 4, Iteration: 150 / 500 [ 30%]  (Warmup)
+Chain 4, Iteration: 200 / 500 [ 40%]  (Warmup)
+Chain 4, Iteration: 250 / 500 [ 50%]  (Warmup)
+Chain 4, Iteration: 251 / 500 [ 50%]  (Sampling)
+Chain 4, Iteration: 300 / 500 [ 60%]  (Sampling)
+Chain 4, Iteration: 350 / 500 [ 70%]  (Sampling)
+Chain 4, Iteration: 400 / 500 [ 80%]  (Sampling)
+Chain 4, Iteration: 450 / 500 [ 90%]  (Sampling)
+Chain 4, Iteration: 500 / 500 [100%]  (Sampling)# 
+#  Elapsed Time: 1349.45 seconds (Warm-up)
+#                103.87 seconds (Sampling)
+#                1453.32 seconds (Total)
+# 
+
+Chain 7, Iteration: 100 / 500 [ 20%]  (Warmup)
+Chain 7, Iteration: 150 / 500 [ 30%]  (Warmup)
+Chain 7, Iteration: 200 / 500 [ 40%]  (Warmup)
+Chain 7, Iteration: 250 / 500 [ 50%]  (Warmup)
+Chain 7, Iteration: 251 / 500 [ 50%]  (Sampling)
+Chain 6, Iteration: 100 / 500 [ 20%]  (Warmup)
+Chain 7, Iteration: 300 / 500 [ 60%]  (Sampling)
+Chain 5, Iteration: 100 / 500 [ 20%]  (Warmup)
+Chain 7, Iteration: 350 / 500 [ 70%]  (Sampling)
+Chain 5, Iteration: 150 / 500 [ 30%]  (Warmup)
+Chain 5, Iteration: 200 / 500 [ 40%]  (Warmup)
+Chain 7, Iteration: 400 / 500 [ 80%]  (Sampling)
+Chain 5, Iteration: 250 / 500 [ 50%]  (Warmup)
+Chain 7, Iteration: 450 / 500 [ 90%]  (Sampling)
+Chain 5, Iteration: 251 / 500 [ 50%]  (Sampling)
+Chain 6, Iteration: 150 / 500 [ 30%]  (Warmup)
+Chain 7, Iteration: 500 / 500 [100%]  (Sampling)
+Chain 5, Iteration: 300 / 500 [ 60%]  (Sampling)# 
+#  Elapsed Time: 1811.29 seconds (Warm-up)
+#                79.37 seconds (Sampling)
+#                1890.66 seconds (Total)
+# 
+
+Chain 6, Iteration: 200 / 500 [ 40%]  (Warmup)
+Chain 5, Iteration: 350 / 500 [ 70%]  (Sampling)
+Chain 6, Iteration: 250 / 500 [ 50%]  (Warmup)
+Chain 6, Iteration: 251 / 500 [ 50%]  (Sampling)
+Chain 5, Iteration: 400 / 500 [ 80%]  (Sampling)
+Chain 6, Iteration: 300 / 500 [ 60%]  (Sampling)
+Chain 6, Iteration: 350 / 500 [ 70%]  (Sampling)
+Chain 5, Iteration: 450 / 500 [ 90%]  (Sampling)
+Chain 6, Iteration: 400 / 500 [ 80%]  (Sampling)
+Chain 5, Iteration: 500 / 500 [100%]  (Sampling)# 
+#  Elapsed Time: 1876.2 seconds (Warm-up)
+#                78.99 seconds (Sampling)
+#                1955.19 seconds (Total)
+# 
+
+Chain 6, Iteration: 450 / 500 [ 90%]  (Sampling)
+Chain 6, Iteration: 500 / 500 [100%]  (Sampling)# 
+#  Elapsed Time: 1914.17 seconds (Warm-up)
+#                49.8 seconds (Sampling)
+#                1963.97 seconds (Total)
+# 
+
+Chain 2, Iteration: 100 / 500 [ 20%]  (Warmup)
+Chain 3, Iteration: 100 / 500 [ 20%]  (Warmup)
+Chain 3, Iteration: 150 / 500 [ 30%]  (Warmup)
+Chain 2, Iteration: 150 / 500 [ 30%]  (Warmup)
+Chain 8, Iteration: 100 / 500 [ 20%]  (Warmup)
+Chain 3, Iteration: 200 / 500 [ 40%]  (Warmup)
+Chain 2, Iteration: 200 / 500 [ 40%]  (Warmup)
+Chain 2, Iteration: 250 / 500 [ 50%]  (Warmup)
+Chain 2, Iteration: 251 / 500 [ 50%]  (Sampling)
+Chain 3, Iteration: 250 / 500 [ 50%]  (Warmup)
+Chain 3, Iteration: 251 / 500 [ 50%]  (Sampling)
+Chain 10, Iteration: 100 / 500 [ 20%]  (Warmup)
+Chain 2, Iteration: 300 / 500 [ 60%]  (Sampling)
+Chain 8, Iteration: 150 / 500 [ 30%]  (Warmup)
+Chain 3, Iteration: 300 / 500 [ 60%]  (Sampling)
+Chain 2, Iteration: 350 / 500 [ 70%]  (Sampling)
+Chain 3, Iteration: 350 / 500 [ 70%]  (Sampling)
+Chain 9, Iteration: 100 / 500 [ 20%]  (Warmup)
+Chain 8, Iteration: 200 / 500 [ 40%]  (Warmup)
+Chain 2, Iteration: 400 / 500 [ 80%]  (Sampling)
+Chain 3, Iteration: 400 / 500 [ 80%]  (Sampling)
+Chain 2, Iteration: 450 / 500 [ 90%]  (Sampling)
+Chain 8, Iteration: 250 / 500 [ 50%]  (Warmup)
+Chain 8, Iteration: 251 / 500 [ 50%]  (Sampling)
+Chain 3, Iteration: 450 / 500 [ 90%]  (Sampling)
+Chain 10, Iteration: 150 / 500 [ 30%]  (Warmup)
+Chain 2, Iteration: 500 / 500 [100%]  (Sampling)# 
+#  Elapsed Time: 2085.34 seconds (Warm-up)
+#                39.55 seconds (Sampling)
+#                2124.89 seconds (Total)
+# 
+
+Chain 8, Iteration: 300 / 500 [ 60%]  (Sampling)
+Chain 3, Iteration: 500 / 500 [100%]  (Sampling)# 
+#  Elapsed Time: 2085.25 seconds (Warm-up)
+#                42.6 seconds (Sampling)
+#                2127.85 seconds (Total)
+# 
+
+Chain 8, Iteration: 350 / 500 [ 70%]  (Sampling)
+Chain 10, Iteration: 200 / 500 [ 40%]  (Warmup)
+Chain 9, Iteration: 150 / 500 [ 30%]  (Warmup)
+Chain 8, Iteration: 400 / 500 [ 80%]  (Sampling)
+Chain 10, Iteration: 250 / 500 [ 50%]  (Warmup)
+Chain 10, Iteration: 251 / 500 [ 50%]  (Sampling)
+Chain 8, Iteration: 450 / 500 [ 90%]  (Sampling)
+Chain 10, Iteration: 300 / 500 [ 60%]  (Sampling)
+Chain 9, Iteration: 200 / 500 [ 40%]  (Warmup)
+Chain 8, Iteration: 500 / 500 [100%]  (Sampling)# 
+#  Elapsed Time: 2077.4 seconds (Warm-up)
+#                40.2 seconds (Sampling)
+#                2117.6 seconds (Total)
+# 
+
+Chain 10, Iteration: 350 / 500 [ 70%]  (Sampling)
+Chain 9, Iteration: 250 / 500 [ 50%]  (Warmup)
+Chain 9, Iteration: 251 / 500 [ 50%]  (Sampling)
+Chain 10, Iteration: 400 / 500 [ 80%]  (Sampling)
+Chain 9, Iteration: 300 / 500 [ 60%]  (Sampling)
+Chain 10, Iteration: 450 / 500 [ 90%]  (Sampling)
+Chain 9, Iteration: 350 / 500 [ 70%]  (Sampling)
+Chain 10, Iteration: 500 / 500 [100%]  (Sampling)# 
+#  Elapsed Time: 2139.59 seconds (Warm-up)
+#                39.3 seconds (Sampling)
+#                2178.89 seconds (Total)
+# 
+
+Chain 9, Iteration: 400 / 500 [ 80%]  (Sampling)
+Chain 9, Iteration: 450 / 500 [ 90%]  (Sampling)
+Chain 9, Iteration: 500 / 500 [100%]  (Sampling)# 
+#  Elapsed Time: 2158.22 seconds (Warm-up)
+#                39.17 seconds (Sampling)
+#                2197.39 seconds (Total)
+# 
+Warning message:
+class "C++Object" is defined (with package slot ‘Rcpp’) but no metadata object found to revise subclass information---not exported?  Making a copy in package ‘.GlobalEnv’ 
+> Warning message:
+class "C++Object" is defined (with package slot ‘Rcpp’) but no metadata object found to revise subclass information---not exported?  Making a copy in package ‘.GlobalEnv’ 
+saveRDS(sample_fit,"oned_arp_stan1000.rds")
+Warning message:
+class "C++Object" is defined (with package slot ‘Rcpp’) but no metadata object found to revise subclass information---not exported?  Making a copy in package ‘.GlobalEnv’ 
+Warning message:
+class "C++Object" is defined (with package slot ‘Rcpp’) but no metadata object found to revise subclass information---not exported?  Making a copy in package ‘.GlobalEnv’ 
+Warning message:
+class "C++Object" is defined (with package slot ‘Rcpp’) but no metadata object found to revise subclass information---not exported?  Making a copy in package ‘.GlobalEnv’ 
+Warning message:
+class "C++Object" is defined (with package slot ‘Rcpp’) but no metadata object found to revise subclass information---not exported?  Making a copy in package ‘.GlobalEnv’ 
+Warning message:
+class "C++Object" is defined (with package slot ‘Rcpp’) but no metadata object found to revise subclass information---not exported?  Making a copy in package ‘.GlobalEnv’ 
+Warning message:
+class "C++Object" is defined (with package slot ‘Rcpp’) but no metadata object found to revise subclass information---not exported?  Making a copy in package ‘.GlobalEnv’ 
+Warning message:
+class "C++Object" is defined (with package slot ‘Rcpp’) but no metadata object found to revise subclass information---not exported?  Making a copy in package ‘.GlobalEnv’ 
+Warning message:
+Warning message:
+class "C++Object" is defined (with package slot ‘Rcpp’) but no metadata object found to revise subclass information---not exported?  Making a copy in package ‘.GlobalEnv’ 
+class "C++Object" is defined (with package slot ‘Rcpp’) but no metadata object found to revise subclass information---not exported?  Making a copy in package ‘.GlobalEnv’ 
+> means_fit <- summary(sample_fit)[[1]]
+> legis_means <- means_fit[grepl("L_adj\\[",row.names(means_fit)),]
+> 
+> #Test with wnominate
+> 
+> vote_data <- list(votes=votes_matrix,legis.names=row.names(votes_matrix))
+> vote_data <- rollcall(data=vote_data)
+> 
+> wnom_fit <- wnominate(vote_data,polarity=constrain_legis[1],dims=1)
+
+Preparing to run W-NOMINATE...
+
+	Checking data...
+
+		All members meet minimum vote requirements.
+
+		Votes dropped:
+		... 74 of 617 total votes dropped.
+
+	Running W-NOMINATE...
+
+		Getting bill parameters...
+		Getting legislator coordinates...
+		Starting estimation of Beta...
+		Getting bill parameters...
+		Getting legislator coordinates...
+		Starting estimation of Beta...
+		Getting bill parameters...
+		Getting legislator coordinates...
+
+
+W-NOMINATE estimation completed successfully.
+W-NOMINATE took 18.049 seconds to execute.
+
+> legis_data <- wnom_fit$legislators
+> legis_data$stan_mean <- legis_means[,1]
+> legis_data$lowci <- legis_means[,4]
+> legis_data$highci <- legis_means[,8]
+> legis_data$scale_mean <- scale(legis_means[,1])
+> legis_data$id <- row.names(legis_data)
+> 
+> legis_melt <- melt(legis_data,measure.vars=c("coord1D","stan_mean"))
+> 
+> #Check correlation between estimates. It is generally correlating at 0.96
+> 
+> cor(legis_data$coord1D,legis_data$stan_mean)
+[1] 0.927465
+> 
+> # Plot W-nominate points against Stan version. Notable difference is that W-Nominate over-predicts variation in 
+> # The democratic party, whereas the Stan version puts the Democrats all in the same box.
+> 
+> ggplot(legis_data,aes(x=coord1D,y=stan_mean)) + geom_point() +
++   geom_text(aes(label=id),check_overlap = TRUE) + geom_abline(intercept=0,slope=1) + my_theme +
++   geom_pointrange(aes(ymin=lowci,ymax=highci),alpha=0.5) + ylab("Stan Estimates") + xlab("WNOMINATE Estimates")
+Error: object 'my_theme' not found
+Execution halted

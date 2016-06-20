@@ -1,0 +1,8 @@
+name: ARP_shiny
+account: kubinec
+server: shinyapps.io
+bundleId: 455297
+url: https://kubinec.shinyapps.io/ARP_shiny/
+when: 1463568572.36651
+asMultiple: FALSE
+asStatic: FALSE

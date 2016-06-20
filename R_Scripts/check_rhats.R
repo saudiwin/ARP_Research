@@ -1,0 +1,26 @@
+# Check Rhats for alpha-nominate models
+require(coda)
+require(shinystan)
+all_models <- readRDS("All_anominate_models.rds")
+one_d <- all_models[1:5]
+two_d <- all_models[6:10]
+rm(all_models)
+one_d_alpha <- as.mcmc.list(lapply(one_d,function(x) x$alpha))
+gelman.diag(one_d_alpha)
+one_d_beta <- as.mcmc.list(lapply(one_d,function(x) x$beta))
+gelman.diag(one_d_beta)
+legislators <- as.mcmc.list(lapply(one_d,function(x) x$legislators[[1]]))
+gelman.diag(legislators)
+bills <- as.mcmc.list(lapply(one_d,function(x) x$yea.locations[[1]]))
+gelman.diag(bills)
+
+two_d_beta <- as.mcmc.list(lapply(two_d,function(x) x$beta))
+gelman.diag(two_d_beta)
+legislators_firstd <- as.mcmc.list(lapply(two_d,function(x) x$legislators[[1]]))
+gelman.diag(legislators_firstd)
+legislators_secondd <- as.mcmc.list(lapply(two_d,function(x) x$legislators[[2]]))
+gelman.diag(legislators_secondd)
+bills_firstd <- as.mcmc.list(lapply(two_d,function(x) x$yea.locations[[1]]))
+gelman.diag(bills_firstd)
+bills_secondd <- as.mcmc.list(lapply(two_d,function(x) x$yea.locations[[2]]))
+gelman.diag(bills_secondd)
