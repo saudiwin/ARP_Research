@@ -66,7 +66,7 @@ votes_matrix_abst <- as.matrix(as.data.frame(lapply(votes_matrix_abst,function(x
 votes_matrix_bin <- apply(votes_matrix_bin,2,function(x) x <- recode(x,'3=1;2=0;NA=NA'))
 votes_matrix_all <- apply(votes_matrix_all,2,function(x) x <- recode(x,'NA=0'))
 votes_matrix_all2 <- apply(votes_matrix_all2,2,function(x) x <- recode(x,'NA=0'))
-votes_matrix_abst <- apply(votes_matrix_abst,2,function(x) x <- recode(x,'1=1;c(2,3)=-1;NA=0'))
+votes_matrix_abst <- apply(votes_matrix_abst,2,function(x) x <- recode(x,'1=1;c(2,3)=0;NA=NA'))
 
 checkcols <- function(x) {
   this_col <- x
@@ -93,7 +93,7 @@ names(num_votes) <- info_legis$legis.names
 revise_data <- function(x) {
   row.names(x) <- info_legis$legis.names
   x <- x[(num_votes>(mean(num_votes)-2*sd(num_votes))),]
-  x <- x[,((bills_agree>0.025) & (bills_agree<0.975) & (na_vals<210))]
+  x <- x[,((bills_agree>0.01) & (bills_agree<0.99) & (na_vals<210))]
   x
 }
 all_matrices <- lapply(all_matrices,revise_data)
@@ -147,12 +147,24 @@ num_con_neg <- ifelse(is.null(constrain_neg),1,length(constrain_neg))
 true_con_pos <- ifelse(is.null(constrain_pos),0,length(constrain_pos))
 true_con_neg <- ifelse(is.null(constrain_neg),0,length(constrain_neg))
 constrain_legis <- c(constrain_pos,constrain_neg)
-all_legis <- 1:nrow(all_matrices[[1]])
+
+# Reorder points which to use for constraining so that the constraints are always first.
+# use just AlHorra & Nidaa
+party <- info_legis$Party
+info_legis <- info_legis[info_legis$Party %in% c('AlHorra','Nidaa'),]
+
+all_matrices[[3]] <- all_matrices[[3]][party %in% c('AlHorra','Nidaa'),]
+num_legis <- nrow(all_matrices[[3]])
+num_bills <- ncol(all_matrices[[3]])
+legislator_points <- rep(1:num_legis,times=num_bills)
+bill_points <- rep(1:num_bills,each=num_legis)
+
+all_legis <- 1:nrow(all_matrices[[3]])
 not_legis <- all_legis[-constrain_legis]
 new_legis <- c(constrain_legis,not_legis)
-all_matrices[[1]] <- all_matrices[[1]][new_legis,]
-info_legis <- info_legis[new_legis,]
-party <- info_legis$Party
+#all_matrices[[3]] <- all_matrices[[3]][new_legis,]
+#info_legis <- info_legis[new_legis,]
+
 # Create dummies, drop first category
 #reorder
 party_names <- as.character(unique(party))
@@ -162,15 +174,9 @@ party_dum <- sapply(unique(party),function(x) as.numeric(party==x))
 party_dum <- cbind(party_dum,1)
 party_init <- ifelse(party=='Afek',-0.5,0.5)
 num_parties <- ncol(party_dum)
-num_legis <- nrow(all_matrices[[1]])
-num_bills <- ncol(all_matrices[[1]])
-legislator_points <- rep(1:num_legis,times=num_bills)
-bill_points <- rep(1:num_bills,each=num_legis)
-
-# Reorder points which to use for constraining so that the constraints are always first.
 
 
-Y <- c(all_matrices[[1]])
+Y <- c(all_matrices[[3]])
 
 #Remove NAs
 remove_nas <- !is.na(Y)
@@ -192,18 +198,19 @@ init_list <- lapply(1:2,function(x) list(sigma=rep(0.5,times=num_bills),L_open=p
 
 sample_fit <- vb(object=compiled_model,data = list(Y=Y, N=length(Y), num_legis=num_legis, num_bills=num_bills, ll=legislator_points,
                                                    bb=bill_points,num_con_pos=num_con_pos,num_con_neg=num_con_neg,true_con_pos=0,
-                                                   party_dum=party_dum,num_parties=num_parties,
-                                                   true_con_neg=0))
+                                                   party_dum=party_dum,num_parties=num_parties,length_parties=nrow(party_dum),
+                                                   true_con_neg=0),algorithm='meanfield',
+                 eta=1,adapt_engaged=FALSE)
 
 means_fit <- summary(sample_fit)[[1]]
-legis_means <- means_fit[grepl("L_party\\[",row.names(means_fit)),]
+legis_means <- means_fit[grepl("L_open\\[",row.names(means_fit)),]
 # multiply scale by 10 because estimating sigmas separately throws off scale
 
 #legis_means <- legis_means * 10
 
 #Test with wnominate
 require(wnominate)
-vote_data <- list(votes=all_matrices[[1]],legis.names=row.names(all_matrices[[1]]))
+vote_data <- list(votes=all_matrices[[3]],legis.names=row.names(all_matrices[[3]]))
 vote_data <- rollcall(data=vote_data)
 
 wnom_fit <- wnominate(vote_data,polarity=1,dims=1,minvotes=20)
@@ -213,7 +220,7 @@ legis_data$stan_mean <- legis_means[,"mean"]
 legis_data$lowci <- legis_means[,"2.5%"]
 legis_data$highci <- legis_means[,"97.5%"]
 legis_data$scale_mean <- scale(legis_means[,"mean"])
-legis_data$id <- row.names(all_matrices[[1]])
+legis_data$id <- row.names(all_matrices[[3]])
 legis_data$party <- info_legis$Party
 updown <- legis_data$stan_mean>0
 legis_data$nameup <- legis_data$id
@@ -228,6 +235,8 @@ cor(legis_data$coord1D,legis_data$stan_mean)
 
 # Plot W-nominate points against Stan version. Notable difference is that W-Nominate over-predicts variation in 
 # The democratic party, whereas the Stan version puts the Democrats all in the same box.
+
+
 
 # Plot party intercepts as well
 
@@ -303,15 +312,20 @@ ggplot(legis_data,aes(x=stan_mean_2,y=stan_mean_1,colour=party)) + geom_point() 
 
 # What we need to do is subtract the two columns to get within-party variation, will require some work
 
-within_party <- extract(sample_fit,pars=c("L_open","L_party"))
-# Identification issue in the party vs. individual effects
-combined_party <- (within_party$L_party - mean(within_party$L_party)) - (within_party$L_open - mean(within_party$L_party))
-combined_party_data <- data.table(stan_mean=apply(combined_party,2,mean),
-                                  stan_lowci=apply(combined_party,2,quantile,probs=.05 ),
-                                  stan_highci=apply(combined_party,2,quantile,probs=.95))
-combined_party_data$id <- legis_data$id
-combined_party_data$party <- legis_data$party
-ggplot(combined_party_data,aes(x=stan_mean,y=reorder(id,stan_mean),colour=party)) + geom_point() +
-  geom_text(aes(label=party),check_overlap = TRUE,hjust=2) +
-  geom_abline(intercept=0,slope=-1) + my_theme +
-  geom_errorbarh(aes(xmin=stan_lowci,xmax=stan_highci),alpha=0.5)
+# within_party <- extract(sample_fit,pars=c("L_open","L_party"))
+# # Identification issue in the party vs. individual effects
+# combined_party <- (within_party$L_party - mean(within_party$L_party)) - (within_party$L_open - mean(within_party$L_party))
+# combined_party_data <- data.table(stan_mean=apply(combined_party,2,mean),
+#                                   stan_lowci=apply(combined_party,2,quantile,probs=.05 ),
+#                                   stan_highci=apply(combined_party,2,quantile,probs=.95))
+# combined_party_data$id <- legis_data$id
+# combined_party_data$party <- legis_data$party
+# ggplot(combined_party_data,aes(x=stan_mean,y=reorder(id,stan_mean),colour=party)) + geom_point() +
+#   geom_text(aes(label=party),check_overlap = TRUE,hjust=2) +
+#   geom_abline(intercept=0,slope=-1) + my_theme +
+#   geom_errorbarh(aes(xmin=stan_lowci,xmax=stan_highci),alpha=0.5)
+
+all_bills <- extract(sample_fit,pars=c("sigma"))[[1]]
+all_bills_means <- apply(all_bills,2,mean)
+bills_estimates <- data.table(bill_means=all_bills_means,id=bills_names[((bills_agree>0.01) & (bills_agree<0.99) & (na_vals<210))],
+                              key='bill_means')
