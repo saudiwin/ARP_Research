@@ -9,16 +9,29 @@ require(stringdist)
 require(wnominate)
 require(pscl)
 require(emIRT)
+source('R_Scripts/Ggplot2_theme.R')
+source('R_Scripts/emIRT_graph.R')
 
-#Vote filtering parameters: will change which legislators/bills are dropped
+#CONTROL PANEL
 
 # Keep legislators with have voted on at least this many bills
-keep_legis <- 10
+keep_legis <- 1
+# Use only the parties in the subset_party variable?
 use_subset <- TRUE
-subset_party <- c('AlHorra','Nidaa')
+subset_party <- c('Al Horra','Nidaa')
+use_both <- FALSE
+# Which of the legislatures to use-- ARP or ANC
+legislature <- "ARP"
+# Use variational inference? Faster, but less accurate
+use_vb <- FALSE
+# Convert absences to a separate category in ordinal regression?
+use_nas <- FALSE
+# Which dataset to use? Put 1 for binary, 2 for abstain, 3 for ordinal
+to_run <- 3
+# Use only a sample of bills/legislators?
+sample_it <- FALSE
 
-# Put 1 for binary, 2 for abstain, 3 for ordinal
-to_run <- 2
+
 
 # Load in new data and also old data on ARP (as new ARP data is not complete with bills + articles)
 
@@ -85,8 +98,16 @@ combined_bin <- data.matrix(as.data.frame(lapply(combined_votes_real,factor,leve
                                           row.names=combined_votes$vote_match))
 combined_abstain <- data.matrix(as.data.frame(lapply(combined_votes_real,factor,levels = c("contre","pour",'abstenu')),
                                               row.names=combined_votes$vote_match))
-combined_ordinal <- data.matrix(as.data.frame(lapply(combined_votes_real,factor,levels = c("contre",'abstenu','pour')),
+combined_ordinal <- data.matrix(as.data.frame(lapply(combined_votes_real,factor,levels = c("contre",'abstenu',NA,'pour')),
                                               row.names=combined_votes$vote_match))
+if(use_nas==TRUE) {
+  combined_ordinal <- apply(combined_ordinal,2,function(x) {
+    x[x==3] <- 4
+    x[is.na(x)] <- 3
+    x
+  })
+}
+
 
 # Make binary matrics all 0 and 1
 combined_bin <- combined_bin -1
@@ -100,13 +121,32 @@ combined_abstain <- combined_abstain - 1
 
 all_matrices <- list(combined_bin,combined_abstain,combined_ordinal)
 
+
+
 if(use_subset==TRUE) {
   to_subset <- rowSums(sapply(subset_party,grepl,combined_members$parliament_bloc))
   to_subset <- combined_members$vote_match[as.logical(to_subset)]
   all_matrices <- lapply(all_matrices,function(x) x[to_subset,])
+  
+  # Reorder based on Bochra
+  
+  all_matrices <- lapply(all_matrices,function(x) {
+    current_names <- row.names(x)
+    current_pos <- which(current_names=='ARP_Bochra Belhaj Hamida')
+    new_names <- c(current_names[-current_pos],current_names[current_pos])
+    x <- x[new_names,]
+    x
+  })
 }
 
 # Now do more data processing 
+
+if(sample_it==TRUE) {
+  all_matrices <- lapply(all_matrices, function(x) {
+    x <-    x[sample(nrow(x),size = 15),sample(ncol(x),size=150)]
+    x
+  })
+}
 
 num_votes <- lapply(all_matrices,apply,1,function(x) {
   y <- sum(!is.na(x))
@@ -114,7 +154,7 @@ num_votes <- lapply(all_matrices,apply,1,function(x) {
 
 bills_agree <- lapply(all_matrices,apply,2,function(x) {
   # Should be at least two types of votes per bill
-  y <- if(length(table(x))==1) {
+  y <- if(length(table(x))<2) {
     FALSE
   } else {
     TRUE
@@ -124,11 +164,17 @@ bills_agree <- lapply(all_matrices,apply,2,function(x) {
 
 revise_data <- function(x,to_keep) {
   to_change <- all_matrices[[x]]
-  to_change <- to_change[num_votes[[x]]>to_keep,]
   to_change <- to_change[,bills_agree[[x]]]
+  to_change <- to_change[num_votes[[x]]>to_keep,]
   to_change
   }
 all_matrices <- lapply(1:length(all_matrices),revise_data,to_keep=keep_legis)
+
+if(use_both==FALSE) {
+  all_matrices <- lapply(all_matrices,function(x) x[grepl(legislature,row.names(x)),])
+}
+
+
 
 
 # Number of legislators/bills in model
@@ -136,6 +182,27 @@ num_legis <- nrow(all_matrices[[to_run]])
 num_bills <- ncol(all_matrices[[to_run]])
 legislator_points <- rep(1:num_legis,times=num_bills)
 bill_points <- rep(1:num_bills,each=num_legis)
+
+# Create ideal point cutoffs
+bill_ideal <- rnorm(1000,1)
+legis_ideal <- rnorm(1000,1)
+raw_scores <- dnorm(bill_ideal,legis_ideal,0.5,log=TRUE)
+cuts <- quantile(raw_scores,probs = c(0.25,0.5,0.75))
+cut_breaks <- cuts[2:3] - cuts[1:2]
+#What to fix final bill at
+if(use_nas==TRUE) {
+bill_pos <- sapply(all_matrices[[to_run]][num_legis,(num_bills-1):num_bills],switch,
+                   -1,
+                   -0.5,
+                   0.5,
+                   1)
+} else {
+  bill_pos <- sapply(all_matrices[[to_run]][num_legis,(num_bills-1):num_bills],switch,
+                     -1,
+                     -0.5,
+                     1)
+}
+
 
 Y <- c(all_matrices[[to_run]])
 
@@ -145,7 +212,10 @@ Y <- Y[remove_nas]
 legislator_points <- legislator_points[remove_nas]
 bill_points <- bill_points[remove_nas]
 
-script_file <- "R_Scripts/nominate_test_simple.h"
+script_file <- if(to_run<3) { 
+  "R_Scripts/nominate_test_simple.h" } else {
+    "R_Scripts/nominate_ordinal.h"
+  }
 model_code <- readChar(script_file,file.info(script_file)$size)
 
 #Parameter of inference is L_open (legislator points) and B_adj (bill points). 
@@ -154,11 +224,34 @@ model_code <- readChar(script_file,file.info(script_file)$size)
 
 
 compiled_model <- stan_model(model_code=model_code,model_name="Nominate: 1 dimension")
-
+if(use_vb==TRUE) {
 sample_fit <- vb(object=compiled_model,data = list(Y=Y, N=length(Y), num_legis=num_legis, num_bills=num_bills, ll=legislator_points,
-                                                   bb=bill_points),algorithm='meanfield')
-
+                                                   bb=bill_points,fixed_bills=length(bill_pos),bill_pos=bill_pos),algorithm='meanfield')
+} else {
+sample_fit <- sampling(compiled_model,data = list(Y=Y, N=length(Y), num_legis=num_legis, num_bills=num_bills, ll=legislator_points,
+                                              bb=bill_points,fixed_bills=length(bill_pos),bill_pos=bill_pos,cut_breaks=cut_breaks),
+                       init=0,iter=1000,chains=2,cores=2)
+}
 means_fit <- summary(sample_fit)[[1]]
-legis_means <- means_fit[grepl("L_std\\[",row.names(means_fit)),]
+legis_means <- as.data.table(means_fit[grepl("L_open\\[",row.names(means_fit)),])
+legis_means$vote_match <- row.names(all_matrices[[to_run]])
+legis_means <- merge(legis_means,combined_members,by.x='vote_match',by.y='vote_match',all.x = TRUE)
 
+  # Plot Stan version points as a summary
+legis_means <- legis_means[order(mean),]
 
+ggplot(legis_means,aes(y=reorder(legis_names,mean),x=mean,colour=parliament_bloc)) + geom_point() + my_theme +
+  geom_text(aes(label=legis_names),check_overlap = TRUE,hjust=2) + facet_wrap(~type) +
+  geom_vline(xintercept=0) + theme(axis.text.y=element_blank(),axis.ticks.y=element_blank()) +
+  geom_errorbarh(aes(xmin=`2.5%`,xmax=`97.5%`)) + ylab("") + xlab("Political Position (Right versus Left)") 
+
+ggsave("output_graphs/Combined_ARP_ANC.pdf",width=20,height=15,units="in")
+
+# Combined without facet
+
+ggplot(legis_means,aes(y=reorder(legis_names,mean),x=mean,colour=parliament_bloc)) + geom_point() + my_theme +
+  geom_text(aes(label=reorder(legis_names,mean)),check_overlap = TRUE,hjust=2) + 
+  geom_vline(xintercept=0) + theme(axis.text.y=element_blank(),axis.ticks.y=element_blank()) +
+  geom_errorbarh(aes(xmin=`2.5%`,xmax=`97.5%`)) + ylab("") + xlab("Political Position (Right versus Left)") 
+
+ggsave("output_graphs/ARP_ANC_all.pdf",width=20,height=15,units="in")
