@@ -55,6 +55,7 @@ model {
   # Half of the standard deviation of the ideal points
   # Think about an empirical bayesian approach to figure out cutpoint differences (in terms of the latent variable)
    steps_free[2] - steps_free[1] ~ normal(4,5);
+   steps_free[2] - steps_free[1] ~ normal(3,.1);
 	#  steps_free[3]  - steps_free[2] ~ normal(5,.01);
 	
   B_yes ~ normal(0,1);
