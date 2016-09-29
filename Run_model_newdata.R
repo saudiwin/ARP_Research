@@ -199,10 +199,10 @@ bill_pos <- sapply(all_matrices[[to_run]][num_legis,(num_bills-1):num_bills],swi
 } else {
   bill_pos <- sapply(all_matrices[[to_run]][num_legis,(num_bills-1):num_bills],switch,
                      -1,
-                     -0.5,
+                     0,
                      1)
 }
-
+bill_pos <- bill_pos[(!is.na(bill_pos) | !is.null(bill_pos))]
 
 Y <- c(all_matrices[[to_run]])
 
@@ -230,7 +230,7 @@ sample_fit <- vb(object=compiled_model,data = list(Y=Y, N=length(Y), num_legis=n
 } else {
 sample_fit <- sampling(compiled_model,data = list(Y=Y, N=length(Y), num_legis=num_legis, num_bills=num_bills, ll=legislator_points,
                                               bb=bill_points,fixed_bills=length(bill_pos),bill_pos=bill_pos,cut_breaks=cut_breaks),
-                       init=0,iter=1000,chains=4,cores=4)
+                       init=0,iter=1000,chains=2,cores=2)
 }
 means_fit <- summary(sample_fit)[[1]]
 legis_means <- as.data.table(means_fit[grepl("L_open\\[",row.names(means_fit)),])
