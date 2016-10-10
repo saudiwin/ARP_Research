@@ -3,12 +3,9 @@
 # Analysis by Robert Kubinec and Sharan Grewal
 # July 5th, 2016
 
-require(data.table)
+
 require(rstan)
-require(stringdist)
-require(wnominate)
-require(pscl)
-require(emIRT)
+require(bawsala)
 source('R_Scripts/Ggplot2_theme.R')
 source('R_Scripts/emIRT_graph.R')
 
@@ -18,7 +15,7 @@ source('R_Scripts/emIRT_graph.R')
 keep_legis <- 1
 # Use only the parties in the subset_party variable?
 use_subset <- TRUE
-subset_party <- c('Al Horra','Nidaa')
+subset_party <- c("Bloc Al Horra","Mouvement Nidaa Tounes")
 use_both <- FALSE
 # Which of the legislatures to use-- ARP or ANC
 legislature <- "ARP"
@@ -30,123 +27,33 @@ use_nas <- FALSE
 to_run <- 3
 # Use only a sample of bills/legislators?
 sample_it <- FALSE
+# Legislator to use as a reference for IRT model
+refleg <- "ARP_Bochra Belhaj Hamida"
+
+# clean and load data for the kind of analysis (ordinal v. binary)
 
 
 
-# Load in new data and also old data on ARP (as new ARP data is not complete with bills + articles)
 
+# Use Bouchra's votes to filter out those particular bills that are useful for pinning the scale
 
-arp_votes <- fread("data/ARP_votes_all.csv",header=TRUE)
-setkey(arp_votes,'legis.names')
-# Load ARP bill names and labels
-arp_votes_names <- fread('data/ARP_votes_names.csv')
-setkey(arp_votes_names,'bill.id')
-anc_votes <- fread('data/ANC_votes.csv',sep=',',header=TRUE,strip.white=TRUE)
-setkey(anc_votes,'legis.names')
-# Load ANC bill names and labels
-anc_vote_names <- fread('data/ANC_votes_labels.csv',col.names = c('bill.names','bill.id'))
-setkey(anc_vote_names,'bill.id')
-# Load member demographics for ANC and ARP
-arp_members <- fread("data/members_ARP.csv",col.names=c('id','legis_names','sex','dob','pob','country','job','jobcat',
-                                                       'elec_list','parliament_bloc'))
-setkey(arp_members,'legis_names')
-anc_members <- fread("data/members_ANC.csv",col.names=c('id','legis_names','sex','dob','pob','country','job',
-                                                      'elec_list','parliament_bloc'))
-setkey(arp_members,'legis_names')
-
-# Attempt a match on ARP/ANC members (fuzzy join)
-
-match_keys <- sapply(anc_members$legis_names,function(x) amatch(x=x,table=arp_members$legis_names,maxDist=2))
-to_update <- arp_members$legis_names[match_keys]
-# use ARP spelling for any overllapping legislators
-
-anc_members[,legis_names:=ifelse(is.na(match_keys),legis_names,to_update)]
-
-match_keys <- sapply(anc_votes$legis.names,function(x) amatch(x=x,table=arp_members$legis_names,maxDist=2))
-to_update <- arp_members$legis_names[match_keys]
-
-anc_votes[,legis.names:=ifelse(is.na(match_keys),legis.names,to_update)]
-
-# Now that we have fixed the legislator names, let's combine the datasets for members and votes by rows
-
-anc_votes$type <- 'ANC'
-arp_votes$type <- 'ARP'
-anc_members$type <- 'ANC'
-arp_members$type <- 'ARP'
-
-combined_members <- rbind.data.frame(anc_members,arp_members,fill=TRUE)
-members_ids <- unique(combined_members$legis_names)
-members_ids_codes <- paste0("Member_",1:length(members_ids))
-member_data <- data.table(legis_names=members_ids,codes=members_ids_codes)
-combined_members <- merge(combined_members,member_data,by='legis_names',all.x=TRUE)
-
-combined_members$vote_match <- paste0(combined_members$type,"_",combined_members$legis_names)
-
-combined_votes <- rbind.data.frame(arp_votes,anc_votes,fill=TRUE)
-combined_votes <- merge(combined_votes,member_data,by.x='legis.names',by.y='legis_names',all.x=TRUE)
-combined_votes$vote_match <- paste0(combined_votes$type,"_",combined_votes$legis.names)
-# Create three versions: binary yes/no, binary yes/no v. abstain, ordinal
-# Ordinal is in emIRT format
-
-# drop some empty columns in the data (no votes recorded)
-
-is_logical <- names(combined_votes)[-which(sapply(combined_votes,is.logical))]
-combined_votes_real <- combined_votes[,is_logical,with=FALSE]
-combined_votes_real <- combined_votes_real[,4:ncol(combined_votes_real),with=FALSE]
-
-combined_bin <- data.matrix(as.data.frame(lapply(combined_votes_real,factor,levels = c("contre","pour"),exclude = "abstenu"),
-                                          row.names=combined_votes$vote_match))
-combined_abstain <- data.matrix(as.data.frame(lapply(combined_votes_real,factor,levels = c("contre","pour",'abstenu')),
-                                              row.names=combined_votes$vote_match))
-combined_ordinal <- data.matrix(as.data.frame(lapply(combined_votes_real,factor,levels = c("contre",'abstenu',NA,'pour')),
-                                              row.names=combined_votes$vote_match))
-if(use_nas==TRUE) {
-  combined_ordinal <- apply(combined_ordinal,2,function(x) {
-    x[x==3] <- 4
-    x[is.na(x)] <- 3
-    x
-  })
-}
-
-
-# Make binary matrics all 0 and 1
-combined_bin <- combined_bin -1
-
-combined_abstain <- apply(combined_abstain,2,function(x) {
-  x[x==2] <- 1
-  x[x==3] <- 2
-  x
-})
-combined_abstain <- combined_abstain - 1
-
-all_matrices <- list(combined_bin,combined_abstain,combined_ordinal)
+cleaned <- clean_data(keep_legis=keep_legis,use_subset=use_subset,subset_party=subset_party,
+                    use_both=use_both,refleg=refleg,
+                    legis=1,use_vb=use_vb,use_nas=use_nas,to_run=to_run,sample_it=sample_it)
 
 
 
-if(use_subset==TRUE) {
-  to_subset <- rowSums(sapply(subset_party,grepl,combined_members$parliament_bloc))
-  to_subset <- combined_members$vote_match[as.logical(to_subset)]
-  all_matrices <- lapply(all_matrices,function(x) x[to_subset,])
-  
-  # Reorder based on Bochra
-  
-  all_matrices <- lapply(all_matrices,function(x) {
-    current_names <- row.names(x)
-    current_pos <- which(current_names=='ARP_Bochra Belhaj Hamida')
-    new_names <- c(current_names[-current_pos],current_names[current_pos])
-    x <- x[new_names,]
-    x
-  })
-}
+output  <- fix_bills(legislator="Bochra Belhaj Hamida",party=c("Bloc Al Horra","Mouvement Nidaa Tounes"),
+                     party_data=combined_members,vote_data=combined_ordinal,legislature="arp_votes")
+
+
+
+
+
 
 # Now do more data processing 
 
-if(sample_it==TRUE) {
-  all_matrices <- lapply(all_matrices, function(x) {
-    x <-    x[sample(nrow(x),size = 15),sample(ncol(x),size=150)]
-    x
-  })
-}
+
 
 num_votes <- lapply(all_matrices,apply,1,function(x) {
   y <- sum(!is.na(x))
@@ -190,19 +97,36 @@ raw_scores <- dnorm(bill_ideal,legis_ideal,0.5,log=TRUE)
 cuts <- quantile(raw_scores,probs = c(0.25,0.5,0.75))
 cut_breaks <- cuts[2:3] - cuts[1:2]
 #What to fix final bill at
-if(use_nas==TRUE) {
-bill_pos <- sapply(all_matrices[[to_run]][num_legis,(num_bills-1):num_bills],switch,
-                   -1,
-                   -0.5,
-                   0.5,
-                   1)
-} else {
-  bill_pos <- sapply(all_matrices[[to_run]][num_legis,(num_bills-1):num_bills],switch,
-                     -1,
-                     0,
-                     1)
-}
-bill_pos <- bill_pos[(!is.na(bill_pos) | !is.null(bill_pos))]
+
+#First, select only those bills with lowest X-sq scores (i.e., equal proportions among categories)
+
+# x_sqs <- apply(all_matrices[[to_run]],2,function(x) {
+#   if(length(unique(x[!is.na(x)])) > 2) {
+#     value <-   table(x) %>% chisq.test()
+#     return(value$statistic) } else {
+#       return(NA)
+#     }
+#   
+# })
+# upper_bound <- quantile(x_sqs,probs=.05,na.rm=TRUE)
+# move_obs <- which(x_sqs<upper_bound & !is.na(x_sqs))
+# 
+all_matrices[[to_run]] <- cbind2(all_matrices[[to_run]][,-final_constraint],all_matrices[[to_run]][,final_constraint])
+
+
+# if(use_nas==TRUE) {
+# bill_pos <- sapply(all_matrices[[to_run]][num_legis,(num_bills-1):num_bills],switch,
+#                    -1,
+#                    -0.5,
+#                    0.5,
+#                    1)
+# } else {
+#   bill_pos <- sapply(all_matrices[[to_run]][num_legis,(num_bills-1):num_bills],switch,
+#                      -1,
+#                      0,
+#                      1)
+# }
+# bill_pos <- bill_pos[(!is.na(bill_pos) | !is.null(bill_pos))]
 
 Y <- c(all_matrices[[to_run]])
 
@@ -226,7 +150,7 @@ model_code <- readChar(script_file,file.info(script_file)$size)
 compiled_model <- stan_model(model_code=model_code,model_name="Nominate: 1 dimension")
 if(use_vb==TRUE) {
 sample_fit <- vb(object=compiled_model,data = list(Y=Y, N=length(Y), num_legis=num_legis, num_bills=num_bills, ll=legislator_points,
-                                                   bb=bill_points,fixed_bills=length(bill_pos),bill_pos=bill_pos),algorithm='meanfield')
+                                                   bb=bill_points,fixed_bills=length(constraint_num),bill_pos=constraint_num),algorithm='meanfield')
 } else {
 sample_fit <- sampling(compiled_model,data = list(Y=Y, N=length(Y), num_legis=num_legis, num_bills=num_bills, ll=legislator_points,
                                               bb=bill_points,fixed_bills=length(bill_pos),bill_pos=bill_pos,cut_breaks=cut_breaks),

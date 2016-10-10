@@ -46,18 +46,18 @@ model {
   #Sigma prior is set to cluster near zero, which is where many of the values seem to go, while also placing positive probability on much larger values of sigma
   #for bills with low discrimination
   
-  sigma ~ lognormal(-0.5,2);
-  L_free ~ normal(0,10);
+  sigma ~ normal(0,10);
+  L_free ~ normal(0,5);
   # We set individual priors on the steps_free cutpoints to prevent cutpoint collapse.
   # The priors are set on differences to ensure spacing
   # The priors also take in our subjective beliefs about the distribution of cutpoints when it comes to voting
   # I.e., we believe that each of these categories represents different utility positions even if there aren't many votes
   # Half of the standard deviation of the ideal points
   # Think about an empirical bayesian approach to figure out cutpoint differences (in terms of the latent variable)
-   steps_free[2] - steps_free[1] ~ normal(2,.1);
+   steps_free[2] - steps_free[1] ~ normal(1,.1);
 	#  steps_free[3]  - steps_free[2] ~ normal(5,.01);
 	
-  B_yes ~ normal(0,1);
+  B_yes ~ normal(0,5);
 
   #model
   for(n in 1:N) {

@@ -1,0 +1,48 @@
+---
+title: "Evaluation of Tunisian parliamentary vote returns"
+author: "Robert Kubinec"
+date: "September 29, 2016"
+output: html_document
+---
+
+
+# Front Matter
+
+This is v0.1 of an election analysis of Tunisian polling-return level election polling data. The data was collected and distributed by the Tunisian NGO Mourakiboun, relying on volunteers to report polling station returns. 
+
+# Descriptives of the Dataset
+
+
+```{r, echo=FALSE}
+require(magrittr)
+require(tidyr)
+require(tibble)
+require(leaflet)
+
+# polling center election returns
+
+polling_data <- data.table::fread('../data/polling_mourakiboun.csv') %>% as.data.frame %>% tibble
+
+# polling center metadata
+
+metadata <- data.table::fread('../data/pollingCenters.csv') %>% as.data.frame %>% tibble
+
+# combined_data
+
+combined <- data.table::fread("../data/points.csv") %>% as.data.frame %>% tibble
+
+```
+
+# Let's make our first interactive map with Leaflet
+
+
+```{r}
+
+leaflet(combined) %>% addTiles()
+
+
+```
+
+
+
+
