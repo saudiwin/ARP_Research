@@ -46,7 +46,7 @@ model {
   #Sigma prior is set to cluster near zero, which is where many of the values seem to go, while also placing positive probability on much larger values of sigma
   #for bills with low discrimination
   
-  sigma ~ normal(0,5);
+  sigma ~ lognormal(0.5,1);
   L_free ~ normal(0,5);
   # We set individual priors on the steps_free cutpoints to prevent cutpoint collapse.
   # The priors are set on differences to ensure spacing
@@ -57,7 +57,7 @@ model {
    steps_free[2] - steps_free[1] ~ normal(1,.1);
 	#  steps_free[3]  - steps_free[2] ~ normal(5,.01);
 	
-  B_yes ~ normal(0,1);
+  B_yes ~ normal(0,5);
 
   #model
   for(n in 1:N) {
@@ -69,11 +69,3 @@ model {
   
 }
 
-generated quantities {
-	vector[num_legis] L_std;
-	
-	L_std <- L_open - mean(L_open);
-	
-	
-	
-}

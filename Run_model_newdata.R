@@ -14,8 +14,8 @@ source('R_Scripts/emIRT_graph.R')
 # Keep legislators with have voted on at least this many bills
 keep_legis <- 1
 # Use only the parties in the subset_party variable?
-use_subset <- FALSE
-subset_party <- c("Bloc Al Horra","Mouvement Nidaa Tounes")
+use_subset <- TRUE
+subset_party <- c("Bloc Al Horra","Mouvement Nidaa Tounes",'Front Populaire')
 use_both <- FALSE
 # Which of the legislatures to use-- ARP or ANC
 legislature <- "arp_votes"
@@ -85,7 +85,7 @@ sample_fit <- vb(object=compiled_model,data = list(Y=Y, N=length(Y), num_legis=n
 } else {
 sample_fit <- sampling(compiled_model,data = list(Y=Y, N=length(Y), num_legis=num_legis, num_bills=num_bills, ll=legislator_points,
                                               bb=bill_points,fixed_bills=length(to_fix$final_constraint),bill_pos=to_fix$constraint_num),
-                       init=0,iter=2000,chains=2,cores=2)
+                       init=0,iter=2000,chains=4,cores=4)
 }
 
 plot_IRT(cleaned=cleaned,stan_obj=sample_fit,legislature="arp_votes")
