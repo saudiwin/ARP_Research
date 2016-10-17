@@ -7,7 +7,7 @@ data {
   int bb[N];
   int fixed_bills;
   vector[fixed_bills] bill_pos;
-  real cut_breaks[2];
+
 }
 
 transformed data {
@@ -46,7 +46,7 @@ model {
   #Sigma prior is set to cluster near zero, which is where many of the values seem to go, while also placing positive probability on much larger values of sigma
   #for bills with low discrimination
   
-  sigma ~ normal(0,10);
+  sigma ~ normal(0,5);
   L_free ~ normal(0,5);
   # We set individual priors on the steps_free cutpoints to prevent cutpoint collapse.
   # The priors are set on differences to ensure spacing
@@ -57,7 +57,7 @@ model {
    steps_free[2] - steps_free[1] ~ normal(1,.1);
 	#  steps_free[3]  - steps_free[2] ~ normal(5,.01);
 	
-  B_yes ~ normal(0,5);
+  B_yes ~ normal(0,1);
 
   #model
   for(n in 1:N) {
