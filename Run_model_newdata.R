@@ -6,8 +6,6 @@
 
 require(rstan)
 require(bawsala)
-source('R_Scripts/Ggplot2_theme.R')
-source('R_Scripts/emIRT_graph.R')
 
 #CONTROL PANEL
 
@@ -16,8 +14,11 @@ keep_legis <- 1
 # Use only the parties in the subset_party variable?
 use_subset <- TRUE
 subset_party <- c("Bloc Al Horra","Mouvement Nidaa Tounes",'Front Populaire')
-use_both <- FALSE
+# Check out partial credit IRT
+categorical <- FALSE
+
 # Which of the legislatures to use-- ARP or ANC
+use_both <- FALSE
 legislature <- "arp_votes"
 # Use variational inference? Faster, but less accurate
 use_vb <- FALSE
@@ -69,7 +70,7 @@ bill_points <- bill_points[remove_nas]
 
 script_file <- if(to_run<3) { 
   "R_Scripts/nominate_test_simple.h" } else {
-    "R_Scripts/nominate_ordinal.h"
+    "R_Scripts/nominate_ordinal.stan"
   }
 model_code <- readChar(script_file,file.info(script_file)$size)
 
@@ -78,14 +79,27 @@ model_code <- readChar(script_file,file.info(script_file)$size)
 # And using an informative normal prior on the legislator points
 # Best fit so far for 3-choice ordinal: N(0,5) on ideal points, sigma ~ N(0,5),N(1,.1) on cutpoints
 
-compiled_model <- stan_model(model_code=model_code,model_name="Nominate: 1 dimension")
+
 if(use_vb==TRUE) {
+  compiled_model <- stan_model(model_code=model_code,model_name="Nominate: 1 dimension")
 sample_fit <- vb(object=compiled_model,data = list(Y=Y, N=length(Y), num_legis=num_legis, num_bills=num_bills, ll=legislator_points,
                                                    bb=bill_points,fixed_bills=length(to_fix$final_constraint),bill_pos=to_fix$constraint_num),algorithm='meanfield')
+} else if(categorical==TRUE) {
+  compiled_model <- stan_model(file=model_code,model_name="Nominate: 1 dimension")
+  sample_fit <- sampling(compiled_model,data = list(y=(Y-1), N=length(Y), J=num_legis, I=num_bills, jj=legislator_points,
+                                                    ii=bill_points,fixed_bills=length(to_fix$final_constraint),bill_pos=to_fix$constraint_num),
+                         init=0,iter=1000,chains=2,cores=2)
+  
 } else {
+  compiled_model <- stan_model(model_code=model_code,model_name="Nominate: 1 dimension")
+
 sample_fit <- sampling(compiled_model,data = list(Y=Y, N=length(Y), num_legis=num_legis, num_bills=num_bills, ll=legislator_points,
                                               bb=bill_points,fixed_bills=length(to_fix$final_constraint),bill_pos=to_fix$constraint_num),
                        init=0,iter=1000,chains=4,cores=4)
+
+
 }
+
+
 
 plot_IRT(cleaned=cleaned,stan_obj=sample_fit,legislature="arp_votes")
