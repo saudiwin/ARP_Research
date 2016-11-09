@@ -17,6 +17,9 @@ subset_party <- c("Bloc Al Horra","Mouvement Nidaa Tounes",'Front Populaire')
 # Check out partial credit IRT
 categorical <- FALSE
 
+# What type of identification to use
+identify <- 'ref_bills'
+
 # Which of the legislatures to use-- ARP or ANC
 use_both <- FALSE
 legislature <- "arp_votes"
@@ -48,7 +51,8 @@ to_fix  <- fix_bills(legislator=legislator,party=subset_party,
 
 # Prepare matrix for model 
 
-vote_matrix <- prepare_matrix(cleaned=cleaned,legislature=legislature,to_fix=to_fix)
+vote_matrix <- prepare_matrix(cleaned=cleaned,legislature=legislature,to_fix=to_fix,
+                              to_pin_bills=c('no_gov','no_opp'))
 
 # Number of legislators/bills in model
 num_legis <- nrow(vote_matrix)
@@ -70,7 +74,11 @@ bill_points <- bill_points[remove_nas]
 
 script_file <- if(to_run<3) { 
   "R_Scripts/nominate_test_simple.h" } else {
+    if(identify=='edstan') {
     "R_Scripts/nominate_ordinal.stan"
+    } else if(identify=='ref_bills'){
+      'R_Scripts/ordinal_billfix.stan'
+    }
   }
 model_code <- readChar(script_file,file.info(script_file)$size)
 
@@ -95,7 +103,7 @@ sample_fit <- vb(object=compiled_model,data = list(Y=Y, N=length(Y), num_legis=n
 
 sample_fit <- sampling(compiled_model,data = list(Y=Y, N=length(Y), num_legis=num_legis, num_bills=num_bills, ll=legislator_points,
                                               bb=bill_points,fixed_bills=length(to_fix$final_constraint),bill_pos=to_fix$constraint_num),
-                       init=0,iter=1000,chains=4,cores=4)
+                       iter=1000,chains=4,cores=4)
 
 
 }
