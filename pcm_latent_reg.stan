@@ -5,7 +5,7 @@ functions {
     vector[rows(beta)] normal_out;
     
     for(i in 1:rows(beta)) {
-      normal_out[i] = normal_lpdf(beta[i]|theta,sigma)
+      normal_out[i] = normal_lpdf(beta[i]|theta,sigma);
     }
     
     
@@ -21,8 +21,8 @@ data {
   int<lower=1,upper=I> ii[N];    // i for n
   int<lower=1,upper=J> jj[N];    // j for n
   int<lower=0> y[N];             // response for n; y = 0, 1 ... m_i
-  int<lower=1> K;                // # person covariates
-  matrix[J,K] W;                 // person covariate matrix
+  //int<lower=1> K;                // # person covariates
+  //matrix[J,K] W;                 // person covariate matrix
 }
 transformed data {
   int r[N];                      // modified response; r = 1, 2, ... m_i + 1
@@ -41,7 +41,7 @@ parameters {
   vector[sum(m)-1] beta_free;    // unconstrained item parameters
   vector[J] theta;
   real<lower=0> sigma;
-  vector[K] lambda;
+  //vector[K] lambda;
 }
 transformed parameters {
   vector[sum(m)] beta;           // constrained item parameters
@@ -51,8 +51,8 @@ model {
   //theta ~ normal(W*lambda, sigma);
   theta ~ normal(0,1);
   beta_free ~ normal(0, 5);
-  //sigma ~ exponential(.1);
+  sigma ~ normal(0,10);
   for (n in 1:N)
     r[n] ~ categorical(pcm_probs(theta[jj[n]],
-                                 segment(beta, pos[ii[n]], m[ii[n]])));
+                                 segment(beta, pos[ii[n]], m[ii[n]]),sigma));
 }
