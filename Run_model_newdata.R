@@ -18,7 +18,7 @@ subset_party <- c("Bloc Al Horra","Mouvement Nidaa Tounes",'Front Populaire')
 categorical <- FALSE
 
 # What type of identification to use
-identify <- 'ref_bills'
+identify <- 'ref_discrim'
 
 # Which of the legislatures to use-- ARP or ANC
 use_both <- FALSE
@@ -46,13 +46,23 @@ cleaned <- clean_data(keep_legis=keep_legis,use_subset=use_subset,subset_party=s
                     use_both=use_both,refleg=legislator,
                     legis=1,use_vb=use_vb,use_nas=use_nas,to_run=to_run,sample_it=sample_it)
 
-to_fix  <- fix_bills(legislator=legislator,party=subset_party,
-                     vote_data=cleaned,legislature=legislature)
+# to_fix  <- fix_bills(legislator=legislator,party=subset_party,
+#                      vote_data=cleaned,legislature=legislature)
+
+to_fix <- fix_bills_discrim(opp='Front Populaire',gov="Mouvement Nidaa Tounes",
+                            vote_data=cleaned,legislature=legislature)
 
 # Prepare matrix for model 
 
-vote_matrix <- prepare_matrix(cleaned=cleaned,legislature=legislature,to_fix=to_fix,
+vote_matrix <- prepare_matrix(cleaned=cleaned,legislature=legislature,to_fix_type=identify,
+                              to_fix=to_fix,
                               to_pin_bills=c('no_gov','no_opp'))
+
+if(identify=='ref_discrim') {
+  opp_num <- vote_matrix$opp_num
+  gov_num <- vote_matrix$gov_num
+  vote_matrix <- vote_matrix$votes
+}
 
 # Number of legislators/bills in model
 num_legis <- nrow(vote_matrix)
@@ -78,6 +88,8 @@ script_file <- if(to_run<3) {
     "R_Scripts/nominate_ordinal.stan"
     } else if(identify=='ref_bills'){
       'R_Scripts/ordinal_billfix.stan'
+    } else if(identify=='ref_discrim') {
+      'R_Scripts/ordinal_discrimfix.stan'
     }
   }
 model_code <- readChar(script_file,file.info(script_file)$size)
@@ -90,19 +102,34 @@ model_code <- readChar(script_file,file.info(script_file)$size)
 
 if(use_vb==TRUE) {
   compiled_model <- stan_model(model_code=model_code,model_name="Nominate: 1 dimension")
-sample_fit <- vb(object=compiled_model,data = list(Y=Y, N=length(Y), num_legis=num_legis, num_bills=num_bills, ll=legislator_points,
-                                                   bb=bill_points,fixed_bills=length(to_fix$final_constraint),bill_pos=to_fix$constraint_num),algorithm='meanfield')
+  sample_fit <- vb(object=compiled_model,data = list(Y=Y, N=length(Y), num_legis=num_legis, num_bills=num_bills, ll=legislator_points,
+                                                     bb=bill_points,fixed_bills=if(identify=='ref_bills') {
+                                                       length(to_fix$final_constraint)
+                                                     } else if(identify=='ref_discrim') {
+                                                       opp_num+gov_num
+                                                     },bill_pos=to_fix$constraint_num),
+                   algorithm='meanfield')
 } else if(categorical==TRUE) {
   compiled_model <- stan_model(file=model_code,model_name="Nominate: 1 dimension")
   sample_fit <- sampling(compiled_model,data = list(y=(Y-1), N=length(Y), J=num_legis, I=num_bills, jj=legislator_points,
-                                                    ii=bill_points,fixed_bills=length(to_fix$final_constraint),bill_pos=to_fix$constraint_num),
+                                                    ii=bill_points,
+                                                    fixed_bills=length(to_fix$final_constraint),
+                                                    opp_num=opp_num,
+                                                    gov_num=gov_num,
+                                                    bill_pos=to_fix$constraint_num),
                          init=0,iter=1000,chains=2,cores=2)
   
 } else {
   compiled_model <- stan_model(model_code=model_code,model_name="Nominate: 1 dimension")
 
 sample_fit <- sampling(compiled_model,data = list(Y=Y, N=length(Y), num_legis=num_legis, num_bills=num_bills, ll=legislator_points,
-                                              bb=bill_points,fixed_bills=length(to_fix$final_constraint),bill_pos=to_fix$constraint_num),
+                                              bb=bill_points,
+                                              fixed_bills=if(identify=='ref_bills') {
+                                                length(to_fix$final_constraint)
+                                              } else if(identify=='ref_discrim') {
+                                                opp_num+gov_num
+                                              },
+                                              bill_pos=to_fix$constraint_num),
                        iter=1000,chains=4,cores=4)
 
 
@@ -110,4 +137,4 @@ sample_fit <- sampling(compiled_model,data = list(Y=Y, N=length(Y), num_legis=nu
 
 
 
-plot_IRT(cleaned=cleaned,stan_obj=sample_fit,legislature="arp_votes")
+plot_IRT(cleaned=cleaned,stan_obj=sample_fit,legislature="arp_votes",plot_param='L_open')
