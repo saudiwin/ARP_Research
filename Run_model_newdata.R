@@ -103,7 +103,7 @@ sample_fit <- vb(object=compiled_model,data = list(Y=Y, N=length(Y), num_legis=n
 
 sample_fit <- sampling(compiled_model,data = list(Y=Y, N=length(Y), num_legis=num_legis, num_bills=num_bills, ll=legislator_points,
                                               bb=bill_points,fixed_bills=length(to_fix$final_constraint),bill_pos=to_fix$constraint_num),
-                       iter=1000,chains=2,cores=2)
+                       iter=1000,chains=4,cores=4)
 
 
 }

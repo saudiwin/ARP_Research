@@ -20,7 +20,7 @@ transformed data {
 
 parameters {
   vector[num_legis] L_free;
-  vector[num_bills-1] B_yes;
+  vector[num_bills-2] B_yes;
   vector[num_bills] sigma;
 ordered[m-1] steps_free;
 }
@@ -58,7 +58,7 @@ model {
    Half of the standard deviation of the ideal points
    Think about an empirical bayesian approach to figure out cutpoint differences (in terms of the latent variable)
    */
-   steps_free[2] - steps_free[1] ~ normal(1,1) T[0,];
+   steps_free[2] - steps_free[1] ~ normal(1,5) T[0,];
 	//  steps_free[3]  - steps_free[2] ~ normal(5,.01);
 	
   B_yes ~ normal(0,5);
