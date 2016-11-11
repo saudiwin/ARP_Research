@@ -129,8 +129,9 @@ sample_fit <- sampling(compiled_model,data = list(Y=Y, N=length(Y), num_legis=nu
                                               } else if(identify=='ref_discrim') {
                                                 opp_num+gov_num
                                               },
-                                              bill_pos=to_fix$constraint_num),
-                       iter=1000,chains=4,cores=4)
+                                              bill_pos=to_fix$constraint_num,
+                       opp_num=opp_num,gov_num=gov_num),
+                       iter=1000,chains=2,cores=2)
 
 
 }
