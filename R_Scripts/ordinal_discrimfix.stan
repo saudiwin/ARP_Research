@@ -39,7 +39,7 @@ vector[num_legis] L_open;
  The relative success of this identification strategy depends on the information in the 10 constrained bills
  However, even with weak information, 10 bills does appear to constrain adequately the legislator ideal points,
  Even if it does not achieve perfect identification for all bills. */
-B_adj = append_row(B_yes,fix_pos);
+B_adj = append_row(B_yes,rep_vector(-1*sum(B_yes),1));
 sigma_int = append_row(sigma_gov,sigma_opp);
 sigma_adj = append_row(sigma,sigma_int);
 // steps = append_row(steps_free,rep_vector(-1*sum(steps_free),1));
