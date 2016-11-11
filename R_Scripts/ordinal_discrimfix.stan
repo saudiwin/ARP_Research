@@ -30,7 +30,6 @@ ordered[m-1] steps_free;
 transformed parameters {
 
 vector[num_bills] B_adj;
-vector[opp_num + gov_num] sigma_int;
 vector[num_bills] sigma_adj;
 vector[num_legis] L_open;
 /* Identification is based on the voting decisions of the last legislator in the legislator vector
@@ -39,9 +38,11 @@ vector[num_legis] L_open;
  The relative success of this identification strategy depends on the information in the 10 constrained bills
  However, even with weak information, 10 bills does appear to constrain adequately the legislator ideal points,
  Even if it does not achieve perfect identification for all bills. */
-B_adj = append_row(B_yes,fix_pos);
-sigma_int = append_row(sigma_gov,sigma_opp);
-sigma_adj = append_row(sigma,sigma_int);
+B_adj = append_row(B_yes,rep_vector(-1*sum(B_yes),1));
+sigma_adj[1:(num_bills-(gov_num+opp_num))] = sigma;
+sigma_adj[(1+num_bills-(gov_num+opp_num)):(num_bills-opp_num)] = sigma_gov;
+sigma_adj[(1+num_bills-opp_num):(num_bills)] = sigma_opp;
+
 // steps = append_row(steps_free,rep_vector(-1*sum(steps_free),1));
 //L_open = append_row(L_free,rep_vector(0,1));
 L_open = L_free;
