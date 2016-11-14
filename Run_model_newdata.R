@@ -117,7 +117,7 @@ if(use_vb==TRUE) {
                                                     opp_num=opp_num,
                                                     gov_num=gov_num,
                                                     bill_pos=to_fix$constraint_num),
-                         init=0,iter=1000,chains=2,cores=2)
+                         init=0,iter=2000,chains=2,cores=2)
   
 } else {
   compiled_model <- stan_model(model_code=model_code,model_name="Nominate: 1 dimension")
@@ -131,7 +131,7 @@ sample_fit <- sampling(compiled_model,data = list(Y=Y, N=length(Y), num_legis=nu
                                               },
                                               bill_pos=to_fix$constraint_num,
                        opp_num=opp_num,gov_num=gov_num),
-                       iter=1000,chains=2,cores=2)
+                       iter=2000,chains=2,cores=2)
 
 
 }
@@ -139,3 +139,10 @@ sample_fit <- sampling(compiled_model,data = list(Y=Y, N=length(Y), num_legis=nu
 
 
 plot_IRT(cleaned=cleaned,stan_obj=sample_fit,legislature="arp_votes",plot_param='L_open')
+
+
+require(dplyr)
+check_matrix <- as_data_frame(vote_matrix)
+check_matrix$party_id <- cleaned[[legislature]]$bloc
+colnames(vote_matrix)[2]
+xtabs(~Bill_2799 + party_id,data=check_matrix)
