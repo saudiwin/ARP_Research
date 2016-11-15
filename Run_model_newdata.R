@@ -131,7 +131,7 @@ sample_fit <- sampling(compiled_model,data = list(Y=Y, N=length(Y), num_legis=nu
                                               },
                                               bill_pos=to_fix$constraint_num,
                        opp_num=opp_num,gov_num=gov_num),
-                       iter=2000,chains=4,cores=4)
+                       iter=2000,chains=2,cores=2)
 
 
 }

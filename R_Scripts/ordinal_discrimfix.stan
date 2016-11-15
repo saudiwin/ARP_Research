@@ -21,7 +21,7 @@ transformed data {
 parameters {
   vector[num_legis] L_free;
   vector[num_bills-1] B_yes;
-  vector[num_bills-(opp_num+gov_num)] sigma;
+  vector[num_bills-(opp_num+gov_num+1)] sigma;
   vector[opp_num] sigma_opp;
   vector<upper=0>[gov_num] sigma_gov;
 ordered[m-1] steps_free;
@@ -40,9 +40,10 @@ vector[num_legis] L_open;
  Even if it does not achieve perfect identification for all bills. */
 B_adj = append_row(B_yes,rep_vector(-1*sum(B_yes),1));
 
-sigma_adj[1:(num_bills-(gov_num+opp_num))] = sigma;
-sigma_adj[(1+num_bills-(gov_num+opp_num)):(num_bills-opp_num)] = sigma_gov;
-sigma_adj[(1+num_bills-opp_num):(num_bills)] = sigma_opp;
+sigma_adj[1:(num_bills-(gov_num+opp_num-1))] = sigma;
+sigma_adj[(1+num_bills-(gov_num+opp_num)):(num_bills-opp_num-1)] = sigma_gov;
+sigma_adj[(1+num_bills-opp_num):(num_bills-1)] = sigma_opp;
+sigma_adj[num_bills] = 0;
 
 // steps = append_row(steps_free,rep_vector(-1*sum(steps_free),1));
 //L_open = append_row(L_free,rep_vector(0,1));
