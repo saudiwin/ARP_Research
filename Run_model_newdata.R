@@ -136,7 +136,8 @@ sample_fit <- sampling(compiled_model,data = list(Y=Y, N=length(Y), num_legis=nu
 
 }
 
-
+Sys.setenv("plotly_username" = "bobkubinec")
+Sys.setenv("plotly_api_key" = "8q00qm53km")
 
 plot_IRT(cleaned=cleaned,stan_obj=sample_fit,legislature="arp_votes",plot_param='L_open')
 
@@ -160,3 +161,6 @@ check_matrix$party_id <- cleaned[[legislature]]$bloc
 colnames(vote_matrix)[2]
 xtabs(~Bill_2039 + party_id,data=check_matrix)
 
+check_summary <- summary(sample_fit)[[1]]
+sigmas <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summary)) %>% 
+  filter(grepl('sigma_adj',x = params)) %>% mutate(bill_labels=names(cleaned[[legislature]])[-(1:4)])
