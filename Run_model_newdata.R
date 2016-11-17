@@ -26,7 +26,7 @@ legislature <- "arp_votes"
 # Use variational inference? Faster, but less accurate
 use_vb <- FALSE
 # Convert absences to a separate category in ordinal regression?
-use_nas <- TRUE
+use_nas <- FALSE
 # Which dataset to use? Put 1 for binary, 2 for abstain, 3 for ordinal
 to_run <- 3
 # Use only a sample of bills/legislators?
@@ -131,7 +131,7 @@ sample_fit <- sampling(compiled_model,data = list(Y=Y, N=length(Y), num_legis=nu
                                               },
                                               bill_pos=to_fix$constraint_num,
                        opp_num=opp_num,gov_num=gov_num),
-                       iter=1000,chains=4,cores=4)
+                       iter=1000,chains=2,cores=2)
 
 
 }
