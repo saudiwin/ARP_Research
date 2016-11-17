@@ -12,7 +12,7 @@ require(bawsala)
 # Keep legislators with have voted on at least this many bills
 keep_legis <- 1
 # Use only the parties in the subset_party variable?
-use_subset <- TRUE
+use_subset <- FALSE
 subset_party <- c("Bloc Al Horra","Mouvement Nidaa Tounes",'Front Populaire')
 # Check out partial credit IRT
 categorical <- FALSE
