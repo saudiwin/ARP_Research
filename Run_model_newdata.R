@@ -12,7 +12,7 @@ require(bawsala)
 # Keep legislators with have voted on at least this many bills
 keep_legis <- 1
 # Use only the parties in the subset_party variable?
-use_subset <- FALSE
+use_subset <- TRUE
 subset_party <- c("Bloc Al Horra","Mouvement Nidaa Tounes",'Front Populaire')
 # Check out partial credit IRT
 categorical <- FALSE
@@ -154,7 +154,7 @@ mcmc_trace(posterior,pars="B_yes[391]")
 
 require(archivist)
 
-saveToLocalRepo(sample_fit,'data/',userTags=c('empirical','ordinal','ref_discrim','pin_leg'))
+saveToLocalRepo(summary(sample_fit),'data/',userTags=c('empirical','ordinal','ref_discrim','pin_leg'))
 check_matrix <- as_data_frame(vote_matrix)
 check_matrix$party_id <- cleaned[[legislature]]$bloc
 colnames(vote_matrix)[2]
