@@ -43,7 +43,7 @@ vector[num_legis] L_open;
  However, even with weak information, 10 bills does appear to constrain adequately the legislator ideal points,
  Even if it does not achieve perfect identification for all bills. */
 
-B_adj = append_row(B_yes,constrain_leg);
+//B_adj = append_row(B_yes,rep_vector(-1*sum(B_yes),1));
 
 sigma_adj = append_row(sigma,sigma_gov);
 /*
@@ -86,7 +86,7 @@ model {
 
   //model
   for(n in 1:N) {
-      pi[n] = sigma_adj[bb[n]] *  L_open[ll[n]] - B_adj[bb[n]];
+      pi[n] = sigma_adj[bb[n]] *  L_open[ll[n]] - B_yes[bb[n]];
 
 	    Y[n] ~ ordered_logistic(pi[n],steps_free);
   }
