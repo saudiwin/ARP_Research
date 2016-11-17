@@ -142,7 +142,11 @@ plot_IRT(cleaned=cleaned,stan_obj=sample_fit,legislature="arp_votes",plot_param=
 
 
 require(dplyr)
+require(bayesplot)
 check_matrix <- as_data_frame(vote_matrix)
 check_matrix$party_id <- cleaned[[legislature]]$bloc
-colnames(vote_matrix)[2]
-xtabs(~Bill_2799 + party_id,data=check_matrix)
+colnames(vote_matrix)[391]
+xtabs(~Bill_2634 + party_id,data=check_matrix)
+
+posterior <- extract(sample_fit,inc_warmup=FALSE,permuted=FALSE)
+mcmc_trace(posterior,pars="B_yes[391]")

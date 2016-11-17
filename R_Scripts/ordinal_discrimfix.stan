@@ -20,8 +20,8 @@ transformed data {
 
 parameters {
   vector[num_legis] L_free;
-  vector[num_bills-1] B_yes;
-  vector[num_bills-(opp_num+gov_num+1)] sigma;
+  vector[num_bills] B_yes;
+  vector[num_bills-(opp_num+gov_num)] sigma;
   vector[opp_num] sigma_opp;
   vector<upper=0>[gov_num] sigma_gov;
 ordered[m-1] steps_free;
@@ -38,12 +38,16 @@ vector[num_legis] L_open;
  The relative success of this identification strategy depends on the information in the 10 constrained bills
  However, even with weak information, 10 bills does appear to constrain adequately the legislator ideal points,
  Even if it does not achieve perfect identification for all bills. */
-B_adj = append_row(B_yes,rep_vector(-1*sum(B_yes),1));
+//B_adj = append_row(B_yes,rep_vector(-1*sum(B_yes),1));
+/*
+sigma_adj[1:(num_bills-(gov_num+opp_num+1))] = sigma;
+sigma_adj[(1+num_bills-(gov_num+opp_num+1)):(num_bills-opp_num-1)] = sigma_gov;
+sigma_adj[(1+num_bills-opp_num-1):(num_bills-1)] = sigma_opp;
+sigma_adj[num_bills] = 0; */
 
-sigma_adj[1:(num_bills-(gov_num+opp_num-1))] = sigma;
-sigma_adj[(1+num_bills-(gov_num+opp_num)):(num_bills-opp_num-1)] = sigma_gov;
-sigma_adj[(1+num_bills-opp_num):(num_bills-1)] = sigma_opp;
-sigma_adj[num_bills] = 0;
+sigma_adj[1:(num_bills-(gov_num+opp_num))] = sigma;
+sigma_adj[(1+num_bills-(gov_num+opp_num)):(num_bills-opp_num)] = sigma_gov;
+sigma_adj[(1+num_bills-opp_num):(num_bills)] = sigma_opp;
 
 // steps = append_row(steps_free,rep_vector(-1*sum(steps_free),1));
 //L_open = append_row(L_free,rep_vector(0,1));
@@ -69,14 +73,14 @@ model {
    Half of the standard deviation of the ideal points
    Think about an empirical bayesian approach to figure out cutpoint differences (in terms of the latent variable)
    */
-   steps_free[2] - steps_free[1] ~ normal(1,5) T[0,];
+   steps_free[2] - steps_free[1] ~ normal(1,10) T[0,];
 	//  steps_free[3]  - steps_free[2] ~ normal(5,.01);
 	
   B_yes ~ normal(0,5);
 
   //model
   for(n in 1:N) {
-      pi[n] = sigma_adj[bb[n]] * ( L_open[ll[n]] - B_adj[bb[n]]);
+      pi[n] = sigma_adj[bb[n]] * ( L_open[ll[n]] - B_yes[bb[n]]);
 	    Y[n] ~ ordered_logistic(pi[n],steps_free);
   }
 
