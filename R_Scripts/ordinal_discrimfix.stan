@@ -25,6 +25,7 @@ parameters {
   vector[num_bills] B_yes;
   vector[num_bills-gov_num] sigma;
   //vector[opp_num] sigma_opp;
+
   vector<upper=0>[gov_num] sigma_gov;
   real constrain_leg;
 ordered[m-1] steps_free;
@@ -41,6 +42,9 @@ vector[num_legis] L_open;
  The relative success of this identification strategy depends on the information in the 10 constrained bills
  However, even with weak information, 10 bills does appear to constrain adequately the legislator ideal points,
  Even if it does not achieve perfect identification for all bills. */
+
+B_adj = append_row(B_yes,constrain_leg);
+
 sigma_adj = append_row(sigma,sigma_gov);
 /*
 sigma_adj[1:(num_bills-(gov_num+opp_num))] = sigma;
@@ -48,6 +52,7 @@ sigma_adj[(1+num_bills-(gov_num+opp_num)):(num_bills-opp_num)] = sigma_gov;
 sigma_adj[(1+num_bills-opp_num):(num_bills)] = sigma_opp;
 */
 //sigma_adj = append_row(sigma,sigma_gov);
+
 
 // steps = append_row(steps_free,rep_vector(-1*sum(steps_free),1));
 //L_open = append_row(L_free,constrain_leg);
@@ -81,7 +86,8 @@ model {
 
   //model
   for(n in 1:N) {
-      pi[n] = sigma_adj[bb[n]] *  L_open[ll[n]] - B_yes[bb[n]];
+      pi[n] = sigma_adj[bb[n]] *  L_open[ll[n]] - B_adj[bb[n]];
+
 	    Y[n] ~ ordered_logistic(pi[n],steps_free);
   }
 
