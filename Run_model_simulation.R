@@ -9,11 +9,6 @@ require(bawsala)
 
 #CONTROL PANEL
 
-# Keep legislators with have voted on at least this many bills
-keep_legis <- 1
-# Use only the parties in the subset_party variable?
-use_subset <- TRUE
-subset_party <- c("Bloc Al Horra","Mouvement Nidaa Tounes",'Front Populaire')
 # Check out partial credit IRT
 categorical <- FALSE
 
@@ -25,14 +20,8 @@ use_both <- FALSE
 legislature <- "arp_votes"
 # Use variational inference? Faster, but less accurate
 use_vb <- FALSE
-# Convert absences to a separate category in ordinal regression?
-use_nas <- FALSE
-# Which dataset to use? Put 1 for binary, 2 for abstain, 3 for ordinal
+
 to_run <- 3
-# Use only a sample of bills/legislators?
-sample_it <- FALSE
-# Legislator to use as a reference for IRT model
-legislator<- "Bochra Belhaj Hamida"
 
 
 # clean and load data for the kind of analysis (ordinal v. binary)
@@ -42,14 +31,13 @@ legislator<- "Bochra Belhaj Hamida"
 
 # Use Bouchra's votes to filter out those particular bills that are useful for pinning the scale
 
-cleaned <- clean_data(keep_legis=keep_legis,use_subset=use_subset,subset_party=subset_party,
-                    use_both=use_both,refleg=legislator,
-                    legis=1,use_vb=use_vb,use_nas=use_nas,to_run=to_run,sample_it=sample_it)
-
+cleaned <- simulate_cleaned(legislature=legislature)
+true_params <- cleaned$true_legis
+cleaned <- cleaned$cleaned
 # to_fix  <- fix_bills(legislator=legislator,party=subset_party,
 #                      vote_data=cleaned,legislature=legislature)
 
-to_fix <- fix_bills_discrim(opp='Front Populaire',gov="Mouvement Nidaa Tounes",
+to_fix <- fix_bills_discrim(opp='3',gov="1",
                             vote_data=cleaned,legislature=legislature)
 
 # Prepare matrix for model 
@@ -138,25 +126,16 @@ sample_fit <- sampling(compiled_model,data = list(Y=Y, N=length(Y), num_legis=nu
 
 
 
-plot_IRT(cleaned=cleaned,stan_obj=sample_fit,legislature="arp_votes",plot_param='L_open')
+plot_IRT(cleaned=cleaned,stan_obj=sample_fit,legislature="arp_votes",plot_param='L_open',true_params=true_params)
 
 
 require(dplyr)
 require(bayesplot)
-
-check_matrix <- as_data_frame(vote_matrix)
-check_matrix$party_id <- cleaned[[legislature]]$bloc
-colnames(vote_matrix)[391]
-xtabs(~Bill_2634 + party_id,data=check_matrix)
-
-posterior <- extract(sample_fit,inc_warmup=FALSE,permuted=FALSE)
-mcmc_trace(posterior,pars="B_yes[391]")
-
 require(archivist)
 
-saveToLocalRepo(sample_fit,'data/',userTags=c('empirical','ordinal','ref_discrim','pin_leg'))
+saveToLocalRepo(sample_fit,'data/',userTags=c('simulation','ordinal','ref_discrim','constrain bills'))
+
 check_matrix <- as_data_frame(vote_matrix)
 check_matrix$party_id <- cleaned[[legislature]]$bloc
 colnames(vote_matrix)[2]
-xtabs(~Bill_2039 + party_id,data=check_matrix)
-
+xtabs(~Bill_2 + party_id,data=check_matrix)
