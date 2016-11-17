@@ -154,7 +154,7 @@ mcmc_trace(posterior,pars="B_yes[391]")
 
 require(archivist)
 
-saveToLocalRepo(summary(sample_fit),'data/',userTags=c('empirical','ordinal','ref_discrim','pin_leg'))
+saveToLocalRepo(summary(sample_fit),'data/',userTags=c('empirical','ordinal','ref_discrim','no parentheses'))
 check_matrix <- as_data_frame(vote_matrix)
 check_matrix$party_id <- cleaned[[legislature]]$bloc
 colnames(vote_matrix)[2]
