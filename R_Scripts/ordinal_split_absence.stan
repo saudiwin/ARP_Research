@@ -38,6 +38,7 @@ parameters {
   vector[num_bills] B_abs;
   real avg_particip;
   real theta_int;
+  real<lower=0,upper=1> theta;
   ordered[m-1] steps_votes;
 //  ordered[m-1] steps_absence;
 }
@@ -51,9 +52,10 @@ L_open = L_free;
 
 model {	
   vector[N] pi1;
-  vector[N] theta;
+  vector[N] pi2;
   sigma ~ normal(0,5);
   theta_int ~ normal(0,5);
+  theta ~ normal(0,5);
   avg_particip ~ normal(0,5);
   sigma_gov ~normal(0,5);
   L_free ~ normal(0,1);
@@ -65,11 +67,12 @@ model {
   //model
   for(n in 1:N) {
       pi1[n] = sigma_adj[bb[n]] *  L_open[ll[n]] - B_yes[bb[n]];
-      theta[n] = sigma_adj[bb[n]] * L_open[ll[n]] - B_abs[bb[n]] + avg_particip * particip[ll[n]];
+      pi2[n] = sigma_adj[bb[n]] * L_open[ll[n]] - B_abs[bb[n]] + avg_particip * particip[ll[n]];
   if(absence[n]==1) {
-	  1 ~ bernoulli_logit(theta[n]);
+	  target += log_sum_exp(bernoulli_lpmf(1 | theta),
+	  bernoulli_lpmf(0 | theta) + bernoulli_logit_lpmf(0 | pi2[n]));
   } else {
-    Y[n] ~ ordered_logistic(pi1[n],steps_votes);
+    target += bernoulli_lpmf(0 | theta) + ordered_logistic_lpmf(Y[n] | pi1[n],steps_votes);
   }
   }
 
