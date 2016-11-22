@@ -69,6 +69,7 @@ model {
   if(absence[n]==1) {
 	  1 ~ bernoulli_logit(theta[n]);
   } else {
+    0 ~ bernoulli_logit(theta[n]);
     Y[n] ~ ordered_logistic(pi1[n],steps_votes);
   }
   }
