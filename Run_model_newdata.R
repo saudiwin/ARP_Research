@@ -177,9 +177,14 @@ sigmas <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summ
   filter(grepl('sigma_adj',x = params)) %>% mutate(bill_labels=names(cleaned[[legislature]])[-(1:4)]) 
 betas <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summary)) %>% 
   filter(grepl('B_yes',x = params)) %>% mutate(bill_labels=names(cleaned[[legislature]])[-(1:4)]) 
+betas2 <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summary)) %>% 
+  filter(grepl('B_abs',x = params)) %>% mutate(bill_labels=names(cleaned[[legislature]])[-(1:4)]) 
 alphas <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summary)) %>% 
   filter(grepl('L_open',x = params))
 
 data_frame(sigma=sigmas$mean,beta=betas$mean) %>% ggplot(aes(x=beta,y=sigma)) + geom_point(alpha=0.5) + theme_minimal() + 
+  stat_smooth(method = 'lm')
+
+data_frame(beta2=betas2$mean,beta=betas$mean) %>% ggplot(aes(x=beta,y=beta2)) + geom_point(alpha=0.5) + theme_minimal() + 
   stat_smooth(method = 'lm')
  
