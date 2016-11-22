@@ -65,7 +65,7 @@ model {
   //model
   for(n in 1:N) {
       pi1[n] = sigma_adj[bb[n]] *  L_open[ll[n]] - B_yes[bb[n]];
-      theta[n] = sigma_adj[bb[n]] * L_open[ll[n]] - B_abs[bb[n]];
+      theta[n] = sigma_adj[bb[n]] * L_open[ll[n]] - B_abs[bb[n]] + avg_particip * particip[ll[n]];
   if(absence[n]==1) {
 	  1 ~ bernoulli_logit(theta[n]);
   } else {
