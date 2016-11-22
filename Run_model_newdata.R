@@ -27,6 +27,8 @@ legislature <- "arp_votes"
 use_vb <- FALSE
 # Convert absences to a separate category in ordinal regression?
 use_nas <- TRUE
+# Split absences by whether absences are for/against party votes? (note: indicates the use of a different ordinal model)
+split_absences <- TRUE
 # Which dataset to use? Put 1 for binary, 2 for abstain, 3 for ordinal
 to_run <- 3
 # Use only a sample of bills/legislators?
@@ -50,13 +52,14 @@ cleaned <- clean_data(keep_legis=keep_legis,use_subset=use_subset,subset_party=s
 #                      vote_data=cleaned,legislature=legislature)
 
 to_fix <- fix_bills_discrim(opp='Front Populaire',gov="Mouvement Nidaa Tounes",
-                            vote_data=cleaned,legislature=legislature)
+                            vote_data=cleaned,legislature=legislature,to_run=to_run,use_nas=use_nas)
 
 # Prepare matrix for model 
 
 vote_matrix <- prepare_matrix(cleaned=cleaned,legislature=legislature,to_fix_type=identify,
                               to_fix=to_fix,
-                              to_pin_bills=c('no_gov','no_opp'))
+                              to_pin_bills=c('no_gov','no_opp'),
+                              split_absences=split_absences,to_run=to_run,use_nas=use_nas)
 
 if(identify=='ref_discrim') {
   opp_num <- vote_matrix$opp_num
@@ -69,6 +72,12 @@ num_legis <- nrow(vote_matrix)
 num_bills <- ncol(vote_matrix)
 legislator_points <- rep(1:num_legis,times=num_bills)
 bill_points <- rep(1:num_bills,each=num_legis)
+
+# Need average participation by legislator
+require(tidyr)
+require(dplyr)
+participation <- cleaned[[legislature]] %>% gather(bill,vote,matches('Bill')) %>% group_by(legis.names) %>% 
+  summarize(particip_rate=1 - (sum(vote==4)/length(vote)))
 
 #What to fix final bill at
 
@@ -83,8 +92,10 @@ legislator_points <- legislator_points[remove_nas]
 bill_points <- bill_points[remove_nas]
 
 script_file <- if(to_run<3) { 
-  "R_Scripts/nominate_test_simple.h" } else {
-    if(identify=='edstan') {
+  "R_Scripts/binary_discrimfix.stan" } else {
+    if(split_absences==TRUE) {
+      'R_Scripts/ordinal_split_absence.stan'
+    } else if(identify=='edstan'){
     "R_Scripts/nominate_ordinal.stan"
     } else if(identify=='ref_bills'){
       'R_Scripts/ordinal_billfix.stan'
@@ -93,7 +104,7 @@ script_file <- if(to_run<3) {
     }
   }
 model_code <- readChar(script_file,file.info(script_file)$size)
-
+ 
 #Parameter of inference is L_open (legislator points) and B_adj (bill points). 
 #Identification happens by assigning the last bill to be a reference category for the other bills
 # And using an informative normal prior on the legislator points
@@ -130,8 +141,8 @@ sample_fit <- sampling(compiled_model,data = list(Y=Y, N=length(Y), num_legis=nu
                                                 opp_num+gov_num
                                               },
                                               bill_pos=to_fix$constraint_num,
-                       opp_num=opp_num,gov_num=gov_num),
-                       iter=1000,chains=4,cores=4)
+                       opp_num=opp_num,gov_num=gov_num,particip=participation$particip_rate),
+                       iter=1000,chains=2,cores=2)
 
 
 }
@@ -150,17 +161,25 @@ check_matrix$party_id <- cleaned[[legislature]]$bloc
 colnames(vote_matrix)[391]
 xtabs(~Bill_2634 + party_id,data=check_matrix)
 
-posterior <- extract(sample_fit,inc_warmup=FALSE,permuted=FALSE)
+posterior <- rstan::extract(sample_fit,inc_warmup=FALSE,permuted=FALSE)
 mcmc_trace(posterior,pars="B_yes[391]")
 
 require(archivist)
 
-saveToLocalRepo(summary(sample_fit),'data/',userTags=c('empirical','ordinal','ref_discrim','no parentheses'))
+saveToLocalRepo(summary(sample_fit),'data/',userTags=c('empirical','ordinal split absence simple binary','ref_discrim','no parentheses'))
 check_matrix <- as_data_frame(vote_matrix)
 check_matrix$party_id <- cleaned[[legislature]]$bloc
 colnames(vote_matrix)[2]
-xtabs(~Bill_2039 + party_id,data=check_matrix)
+xtabs(~Bill_3890 + party_id,data=check_matrix)
 
 check_summary <- summary(sample_fit)[[1]]
 sigmas <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summary)) %>% 
-  filter(grepl('sigma_adj',x = params)) %>% mutate(bill_labels=names(cleaned[[legislature]])[-(1:4)])
+  filter(grepl('sigma_adj',x = params)) %>% mutate(bill_labels=names(cleaned[[legislature]])[-(1:4)]) 
+betas <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summary)) %>% 
+  filter(grepl('B_yes',x = params)) %>% mutate(bill_labels=names(cleaned[[legislature]])[-(1:4)]) 
+alphas <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summary)) %>% 
+  filter(grepl('L_open',x = params))
+
+data_frame(sigma=sigmas$mean,beta=betas$mean) %>% ggplot(aes(x=beta,y=sigma)) + geom_point(alpha=0.5) + theme_minimal() + 
+  stat_smooth(method = 'lm')
+ 
