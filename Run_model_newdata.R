@@ -86,6 +86,7 @@ participation <- cleaned[[legislature]] %>% gather(bill,vote,matches('Bill')) %>
 Y <- c(vote_matrix)
 
 #Remove NAs
+Y[Y >3] <- NA
 remove_nas <- !is.na(Y)
 Y <- Y[remove_nas]
 legislator_points <- legislator_points[remove_nas]
@@ -150,7 +151,7 @@ sample_fit <- sampling(compiled_model,data = list(Y=Y, N=length(Y), num_legis=nu
 Sys.setenv("plotly_username" = "bobkubinec")
 Sys.setenv("plotly_api_key" = "8q00qm53km")
 
-plot_IRT(cleaned=cleaned,stan_obj=sample_fit,legislature="arp_votes",plot_param='L_open')
+plot_IRT(cleaned=cleaned,stan_obj=sample_fit,legislature="arp_votes",plot_param='L_open',ggplot=TRUE)
 
 
 require(dplyr)
@@ -166,7 +167,7 @@ mcmc_trace(posterior,pars="B_yes[391]")
 
 require(archivist)
 
-saveToLocalRepo(summary(sample_fit),'data/',userTags=c('empirical','ordinal split absence simple binary','ref_discrim','no parentheses'))
+saveToLocalRepo(summary(sample_fit),'data/',userTags=c('empirical','ordinal split absence constrain ZIP','ref_discrim','no parentheses'))
 check_matrix <- as_data_frame(vote_matrix)
 check_matrix$party_id <- cleaned[[legislature]]$bloc
 colnames(vote_matrix)[2]
@@ -175,6 +176,8 @@ xtabs(~Bill_3890 + party_id,data=check_matrix)
 check_summary <- summary(sample_fit)[[1]]
 sigmas <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summary)) %>% 
   filter(grepl('sigma_adj',x = params)) %>% mutate(bill_labels=names(cleaned[[legislature]])[-(1:4)]) 
+sigmas2 <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summary)) %>% 
+  filter(grepl('sigma_abs',x = params)) %>% mutate(bill_labels=names(cleaned[[legislature]])[-(1:4)]) 
 betas <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summary)) %>% 
   filter(grepl('B_yes',x = params)) %>% mutate(bill_labels=names(cleaned[[legislature]])[-(1:4)]) 
 betas2 <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summary)) %>% 
@@ -182,7 +185,7 @@ betas2 <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summ
 alphas <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summary)) %>% 
   filter(grepl('L_open',x = params))
 
-data_frame(sigma=sigmas$mean,beta=betas$mean) %>% ggplot(aes(x=beta,y=sigma)) + geom_point(alpha=0.5) + theme_minimal() + 
+data_frame(sigma=sigmas$mean,beta=betas2$mean) %>% ggplot(aes(x=beta,y=sigma)) + geom_point(alpha=0.5) + theme_minimal() + 
   stat_smooth(method = 'lm')
 
 data_frame(beta2=betas2$mean,beta=betas$mean) %>% ggplot(aes(x=beta,y=beta2)) + geom_point(alpha=0.5) + theme_minimal() + 
