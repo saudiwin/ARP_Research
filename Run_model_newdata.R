@@ -86,7 +86,7 @@ participation <- cleaned[[legislature]] %>% gather(bill,vote,matches('Bill')) %>
 Y <- c(vote_matrix)
 
 #Remove NAs
-Y[Y >3] <- NA
+
 remove_nas <- !is.na(Y)
 Y <- Y[remove_nas]
 legislator_points <- legislator_points[remove_nas]
@@ -171,7 +171,7 @@ saveToLocalRepo(summary(sample_fit),'data/',userTags=c('empirical','ordinal spli
 check_matrix <- as_data_frame(vote_matrix)
 check_matrix$party_id <- cleaned[[legislature]]$bloc
 colnames(vote_matrix)[2]
-xtabs(~Bill_3890 + party_id,data=check_matrix)
+#xtabs(~Bill_3890 + party_id,data=check_matrix)
 
 check_summary <- summary(sample_fit)[[1]]
 sigmas <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summary)) %>% 
@@ -185,9 +185,11 @@ betas2 <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summ
 alphas <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summary)) %>% 
   filter(grepl('L_open',x = params))
 
-data_frame(sigma=sigmas$mean,beta=betas2$mean) %>% ggplot(aes(x=beta,y=sigma)) + geom_point(alpha=0.5) + theme_minimal() + 
+data_frame(sigma=sigmas$mean,beta=betas$mean) %>% ggplot(aes(x=beta,y=sigma)) + geom_point(alpha=0.5) + theme_minimal() + 
   stat_smooth(method = 'lm')
 
 data_frame(beta2=betas2$mean,beta=betas$mean) %>% ggplot(aes(x=beta,y=beta2)) + geom_point(alpha=0.5) + theme_minimal() + 
   stat_smooth(method = 'lm')
+
+
  
