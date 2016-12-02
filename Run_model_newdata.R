@@ -6,6 +6,10 @@
 
 require(rstan)
 require(bawsala)
+require(bayesplot)
+require(tidyr)
+require(dplyr)
+require(archivist)
 
 #CONTROL PANEL
 
@@ -29,6 +33,8 @@ use_vb <- FALSE
 use_nas <- TRUE
 # Split absences by whether absences are for/against party votes? (note: indicates the use of a different ordinal model)
 split_absences <- TRUE
+#Reference bill for absences constraint
+ref_absence <- 'Bill_4125'
 # Which dataset to use? Put 1 for binary, 2 for abstain, 3 for ordinal
 to_run <- 3
 # Use only a sample of bills/legislators?
@@ -59,7 +65,8 @@ to_fix <- fix_bills_discrim(opp='Front Populaire',gov="Mouvement Nidaa Tounes",
 vote_matrix <- prepare_matrix(cleaned=cleaned,legislature=legislature,to_fix_type=identify,
                               to_fix=to_fix,
                               to_pin_bills=c('no_gov','no_opp'),
-                              split_absences=split_absences,to_run=to_run,use_nas=use_nas)
+                              split_absences=split_absences,absent_bill=ref_absence,
+                              to_run=to_run,use_nas=use_nas)
 
 if(identify=='ref_discrim') {
   opp_num <- vote_matrix$opp_num
@@ -74,8 +81,7 @@ legislator_points <- rep(1:num_legis,times=num_bills)
 bill_points <- rep(1:num_bills,each=num_legis)
 
 # Need average participation by legislator
-require(tidyr)
-require(dplyr)
+
 participation <- cleaned[[legislature]] %>% gather(bill,vote,matches('Bill')) %>% group_by(legis.names) %>% 
   summarize(particip_rate=1 - (sum(vote==4)/length(vote)))
 
@@ -143,7 +149,7 @@ sample_fit <- sampling(compiled_model,data = list(Y=Y, N=length(Y), num_legis=nu
                                               },
                                               bill_pos=to_fix$constraint_num,
                        opp_num=opp_num,gov_num=gov_num,particip=participation$particip_rate),
-                       iter=1000,chains=2,cores=2)
+                       iter=5000,chains=4,cores=2)
 
 
 }
@@ -151,11 +157,12 @@ sample_fit <- sampling(compiled_model,data = list(Y=Y, N=length(Y), num_legis=nu
 Sys.setenv("plotly_username" = "bobkubinec")
 Sys.setenv("plotly_api_key" = "8q00qm53km")
 
+png(filename='split_absence_final.png',width=1024,height=1600,res=120)
 plot_IRT(cleaned=cleaned,stan_obj=sample_fit,legislature="arp_votes",plot_param='L_open',ggplot=TRUE)
+dev.off()
 
 
-require(dplyr)
-require(bayesplot)
+
 
 check_matrix <- as_data_frame(vote_matrix)
 check_matrix$party_id <- cleaned[[legislature]]$bloc
@@ -165,7 +172,7 @@ xtabs(~Bill_2634 + party_id,data=check_matrix)
 posterior <- rstan::extract(sample_fit,inc_warmup=FALSE,permuted=FALSE)
 mcmc_trace(posterior,pars="B_yes[391]")
 
-require(archivist)
+
 
 saveToLocalRepo(summary(sample_fit),'data/',userTags=c('empirical','ordinal split absence constrain ZIP','ref_discrim','no parentheses'))
 check_matrix <- as_data_frame(vote_matrix)
