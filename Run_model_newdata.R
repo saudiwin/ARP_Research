@@ -34,7 +34,7 @@ use_nas <- TRUE
 # Split absences by whether absences are for/against party votes? (note: indicates the use of a different ordinal model)
 split_absences <- TRUE
 #Reference bill for absences constraint
-ref_absence <- 'Bill_4125'
+ref_absence <- 'Bill_3977'
 # Which dataset to use? Put 1 for binary, 2 for abstain, 3 for ordinal
 to_run <- 3
 # Use only a sample of bills/legislators?
@@ -149,7 +149,7 @@ sample_fit <- sampling(compiled_model,data = list(Y=Y, N=length(Y), num_legis=nu
                                               },
                                               bill_pos=to_fix$constraint_num,
                        opp_num=opp_num,gov_num=gov_num,particip=participation$particip_rate),
-                       iter=5000,chains=4,cores=2)
+                       iter=1000,chains=4,cores=4)
 
 
 }
@@ -170,21 +170,21 @@ colnames(vote_matrix)[391]
 xtabs(~Bill_2634 + party_id,data=check_matrix)
 
 posterior <- rstan::extract(sample_fit,inc_warmup=FALSE,permuted=FALSE)
-mcmc_trace(posterior,pars="B_yes[391]")
+mcmc_trace(posterior,pars="avg_particip")
 
 
 
 saveToLocalRepo(summary(sample_fit),'data/',userTags=c('empirical','ordinal split absence constrain ZIP','ref_discrim','no parentheses'))
 check_matrix <- as_data_frame(vote_matrix)
 check_matrix$party_id <- cleaned[[legislature]]$bloc
-colnames(vote_matrix)[2]
-#xtabs(~Bill_3890 + party_id,data=check_matrix)
+colnames(vote_matrix)[1310]
+xtabs(~Bill_3977 + party_id,data=check_matrix)
 
 check_summary <- summary(sample_fit)[[1]]
 sigmas <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summary)) %>% 
   filter(grepl('sigma_adj',x = params)) %>% mutate(bill_labels=names(cleaned[[legislature]])[-(1:4)]) 
 sigmas2 <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summary)) %>% 
-  filter(grepl('sigma_abs',x = params)) %>% mutate(bill_labels=names(cleaned[[legislature]])[-(1:4)]) 
+  filter(grepl('sigma_abs',x = params))
 betas <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summary)) %>% 
   filter(grepl('B_yes',x = params)) %>% mutate(bill_labels=names(cleaned[[legislature]])[-(1:4)]) 
 betas2 <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summary)) %>% 
