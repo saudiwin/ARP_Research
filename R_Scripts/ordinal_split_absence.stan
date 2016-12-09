@@ -37,7 +37,7 @@ parameters {
   vector [num_bills] B_abs;
   vector [num_bills-10] sigma_abs_open;
   ordered[m-1] steps_votes;
-  vector<upper=0>[10] abs_constrain;
+  vector<lower=0>[10] abs_constrain;
   real avg_particip;
 }
 
