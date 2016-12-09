@@ -35,13 +35,9 @@ parameters {
   vector[num_bills-gov_num] sigma;
   vector<upper=0>[gov_num] sigma_gov;
   vector [num_bills] B_abs;
-  vector [num_bills-1] sigma_abs_open;
+  vector [num_bills-10] sigma_abs_open;
   ordered[m-1] steps_votes;
-<<<<<<< HEAD
-  real<upper=0> abs_constrain;
-=======
-  real<lower=0.5> abs_constrain;
->>>>>>> a4dbe18bf8645f48572b5f27c84a7612a9e698bb
+  vector<upper=0>[10] abs_constrain;
   real avg_particip;
 }
 

@@ -65,7 +65,7 @@ to_fix <- fix_bills_discrim(opp='Front Populaire',gov="Mouvement Nidaa Tounes",
 vote_matrix <- prepare_matrix(cleaned=cleaned,legislature=legislature,to_fix_type=identify,
                               to_fix=to_fix,
                               to_pin_bills=c('no_gov','no_opp'),
-                              split_absences=split_absences,absent_bill=ref_absence,
+                              split_absences=split_absences,absent_bill=to_fix$abs,
                               to_run=to_run,use_nas=use_nas)
 
 if(identify=='ref_discrim') {
@@ -177,8 +177,8 @@ mcmc_trace(posterior,pars="avg_particip")
 saveToLocalRepo(summary(sample_fit),'data/',userTags=c('empirical','ordinal split absence constrain ZIP','ref_discrim','no parentheses'))
 check_matrix <- as_data_frame(vote_matrix)
 check_matrix$party_id <- cleaned[[legislature]]$bloc
-colnames(vote_matrix)[1310]
-xtabs(~Bill_3977 + party_id,data=check_matrix)
+colnames(vote_matrix)[82]
+xtabs(~Bill_1834 + party_id,data=check_matrix)
 
 check_summary <- summary(sample_fit)[[1]]
 sigmas <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summary)) %>% 
