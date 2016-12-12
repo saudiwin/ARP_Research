@@ -62,10 +62,22 @@ to_fix <- fix_bills_discrim(opp='Front Populaire',gov="Mouvement Nidaa Tounes",
 
 # Prepare matrix for model 
 
+new_vote_matrix <- apply(readRDS('vote_matrix.rds'),2,function(x) {
+  x <- ifelse(x>3,1,-1)
+})
+require(emIRT)
+abs_model <- binIRT(.rc=list(votes=new_vote_matrix),
+                    .starts=getStarts(nrow(new_vote_matrix),
+                                      ncol(new_vote_matrix),1),
+                    .priors=makePriors(nrow(new_vote_matrix),
+                                       ncol(new_vote_matrix),1))
+discrims <- data_frame(discrims=abs_model$means$beta[,1],bills=colnames(new_vote_matrix)) %>% 
+  arrange(desc(discrims))
+
 vote_matrix <- prepare_matrix(cleaned=cleaned,legislature=legislature,to_fix_type=identify,
                               to_fix=to_fix,
                               to_pin_bills=c('no_gov','no_opp'),
-                              split_absences=split_absences,absent_bill=to_fix$abs,
+                              split_absences=split_absences,absent_bill=readRDS('keep_cols_abs.rds'),
                               to_run=to_run,use_nas=use_nas)
 
 if(identify=='ref_discrim') {
@@ -82,8 +94,10 @@ bill_points <- rep(1:num_bills,each=num_legis)
 
 # Need average participation by legislator
 
-participation <- cleaned[[legislature]] %>% gather(bill,vote,matches('Bill')) %>% group_by(legis.names) %>% 
+participation <- cleaned[[legislature]] %>% gather(bill,vote,matches('Bill')) %>% group_by(bloc) %>% 
   summarize(particip_rate=1 - (sum(vote==4)/length(vote)))
+
+
 
 #What to fix final bill at
 
@@ -174,11 +188,8 @@ mcmc_trace(posterior,pars="avg_particip")
 
 
 
-saveToLocalRepo(summary(sample_fit),'data/',userTags=c('empirical','ordinal split absence constrain ZIP','ref_discrim','no parentheses'))
-check_matrix <- as_data_frame(vote_matrix)
-check_matrix$party_id <- cleaned[[legislature]]$bloc
-colnames(vote_matrix)[1290]
-xtabs(~Bill_3910+ party_id,data=check_matrix)
+#saveToLocalRepo(summary(sample_fit),'data/',userTags=c('empirical','ordinal split absence constrain ZIP','ref_discrim','no parentheses'))
+
 
 check_summary <- summary(sample_fit)[[1]]
 sigmas <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summary)) %>% 
@@ -198,5 +209,29 @@ data_frame(sigma=sigmas$mean,beta=betas$mean) %>% ggplot(aes(x=beta,y=sigma)) + 
 data_frame(beta2=betas2$mean,beta=betas$mean) %>% ggplot(aes(x=beta,y=beta2)) + geom_point(alpha=0.5) + theme_minimal() + 
   stat_smooth(method = 'lm')
 
+#Keep only 1 chain
 
- 
+lookat_params <- rstan::extract(sample_fit,permuted=FALSE)
+lookat_params <- lookat_params[,1,]
+sigmas_est <- lookat_params[,grepl('sigma_adj',colnames(lookat_params))]
+sigmas2_est <- lookat_params[,grepl('sigma_abs\\[',colnames(lookat_params))]
+sigmas_est <- sigmas_est %>% as_data_frame %>% gather(param_name,value) %>% group_by(param_name) %>% 
+    summarize(avg=mean(value),high=quantile(value,0.95),low=quantile(value,0.05))
+sigmas2_est <- sigmas2_est %>% as_data_frame %>% gather(param_name,value) %>% group_by(param_name) %>% 
+  summarize(avg=mean(value),high=quantile(value,0.95),low=quantile(value,0.05))
+
+chisqs <- apply(vote_matrix,2,function(x) {
+  x <- table(x)
+  chisq <- chisq.test(x)
+  return(chisq$statistic)
+})
+
+data_frame(sigma_est=sigmas2_est$avg,chisq=chisqs) %>% ggplot(aes(x=sigma_est,y=chisqs)) + geom_point(alpha=0.5) + theme_minimal() + 
+  stat_smooth(method = 'lm')
+colnames(vote_matrix)[1146]
+
+xtabs(~Bill_3702+ party_id,data=check_matrix)
+
+sigmas2_est <- arrange(sigmas2_est,avg)
+keep_cols <- stringr::str_extract(sigmas2_est$param_name,'[0-9]+')[1:15]
+saveRDS(keep_cols,'keep_cols_abs.rds')
