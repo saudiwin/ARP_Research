@@ -73,7 +73,9 @@ abs_model <- binIRT(.rc=list(votes=new_vote_matrix),
                                        ncol(new_vote_matrix),1))
 discrims <- data_frame(discrims=abs_model$means$beta[,1],bills=colnames(new_vote_matrix)) %>% 
   arrange(desc(discrims))
+to_fix$gov <- readRDS('keep_cols_gov.rds')
 
+#to_fix$gov <- NULL
 vote_matrix <- prepare_matrix(cleaned=cleaned,legislature=legislature,to_fix_type=identify,
                               to_fix=to_fix,
                               to_pin_bills=c('no_gov','no_opp'),
@@ -94,7 +96,7 @@ bill_points <- rep(1:num_bills,each=num_legis)
 
 # Need average participation by legislator
 
-participation <- cleaned[[legislature]] %>% gather(bill,vote,matches('Bill')) %>% group_by(bloc) %>% 
+participation <- cleaned[[legislature]] %>% gather(bill,vote,matches('Bill')) %>% group_by(legis.names) %>% 
   summarize(particip_rate=1 - (sum(vote==4)/length(vote)))
 
 
@@ -104,6 +106,7 @@ participation <- cleaned[[legislature]] %>% gather(bill,vote,matches('Bill')) %>
 
 
 Y <- c(vote_matrix)
+Y[Y>3] <- 4
 
 #Remove NAs
 
@@ -131,7 +134,10 @@ model_code <- readChar(script_file,file.info(script_file)$size)
 # And using an informative normal prior on the legislator points
 # Best fit so far for 3-choice ordinal: N(0,5) on ideal points, sigma ~ N(0,5),N(1,.1) on cutpoints
 
-
+starts <- readRDS('vb_starts.rds')
+make_starts <- function() {
+  starts
+}
 if(use_vb==TRUE) {
   compiled_model <- stan_model(model_code=model_code,model_name="Nominate: 1 dimension")
   sample_fit <- vb(object=compiled_model,data = list(Y=Y, N=length(Y), num_legis=num_legis, num_bills=num_bills, ll=legislator_points,
@@ -163,11 +169,12 @@ sample_fit <- sampling(compiled_model,data = list(Y=Y, N=length(Y), num_legis=nu
                                               },
                                               bill_pos=to_fix$constraint_num,
                        opp_num=opp_num,gov_num=gov_num,particip=participation$particip_rate),
-                       iter=1000,chains=4,cores=4)
+                       init=make_starts,
+                       iter=5000,chains=4,cores=4,thin=4)
 
 
 }
-
+saveRDS(sample_fit,'most_recent_fit.rds')
 Sys.setenv("plotly_username" = "bobkubinec")
 Sys.setenv("plotly_api_key" = "8q00qm53km")
 
@@ -180,8 +187,8 @@ dev.off()
 
 check_matrix <- as_data_frame(vote_matrix)
 check_matrix$party_id <- cleaned[[legislature]]$bloc
-colnames(vote_matrix)[391]
-xtabs(~Bill_2634 + party_id,data=check_matrix)
+colnames(vote_matrix)[1308]
+xtabs(~Bill_2020 + party_id,data=check_matrix)
 
 posterior <- rstan::extract(sample_fit,inc_warmup=FALSE,permuted=FALSE)
 mcmc_trace(posterior,pars="avg_particip")
@@ -212,7 +219,7 @@ data_frame(beta2=betas2$mean,beta=betas$mean) %>% ggplot(aes(x=beta,y=beta2)) + 
 #Keep only 1 chain
 
 lookat_params <- rstan::extract(sample_fit,permuted=FALSE)
-lookat_params <- lookat_params[,1,]
+lookat_params <- lookat_params[,2,]
 sigmas_est <- lookat_params[,grepl('sigma_adj',colnames(lookat_params))]
 sigmas2_est <- lookat_params[,grepl('sigma_abs\\[',colnames(lookat_params))]
 sigmas_est <- sigmas_est %>% as_data_frame %>% gather(param_name,value) %>% group_by(param_name) %>% 
@@ -228,10 +235,18 @@ chisqs <- apply(vote_matrix,2,function(x) {
 
 data_frame(sigma_est=sigmas2_est$avg,chisq=chisqs) %>% ggplot(aes(x=sigma_est,y=chisqs)) + geom_point(alpha=0.5) + theme_minimal() + 
   stat_smooth(method = 'lm')
-colnames(vote_matrix)[1146]
+colnames(vote_matrix)[1280]
 
-xtabs(~Bill_3702+ party_id,data=check_matrix)
+xtabs(~Bill_3941+ party_id,data=check_matrix)
 
-sigmas2_est <- arrange(sigmas2_est,avg)
-keep_cols <- stringr::str_extract(sigmas2_est$param_name,'[0-9]+')[1:15]
-saveRDS(keep_cols,'keep_cols_abs.rds')
+# sigmas2_est <- arrange(sigmas2_est,avg)
+# keep_cols <- as.numeric(stringr::str_extract(sigmas2_est$param_name,'[0-9]+')[1:20])
+# keep_cols <- colnames(vote_matrix)[keep_cols]
+# saveRDS(keep_cols,'keep_cols_abs.rds')
+# 
+# sigmas <- arrange(sigmas,mean)
+# keep_cols <- as.numeric(stringr::str_extract(sigmas$params,'[0-9]+')[1:60])
+# keep_cols <- colnames(vote_matrix)[keep_cols]
+# saveRDS(keep_cols,'keep_cols_gov.rds')
+
+source('R_Scripts/Generate_posterior.R')

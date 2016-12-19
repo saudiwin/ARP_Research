@@ -33,20 +33,21 @@ parameters {
   vector[num_legis] L_free;
   vector[num_bills] B_yes;
   vector[num_bills-gov_num] sigma;
+  //vector[num_bills] sigma;
   vector<upper=0>[gov_num] sigma_gov;
   vector [num_bills] B_abs;
-  vector [num_bills-15] sigma_abs_open;
+  vector [num_bills] sigma_abs_open;
   ordered[m-1] steps_votes;
-  vector<upper=0>[15] abs_constrain;
+  //vector<upper=0>[15] abs_constrain;
   real avg_particip;
 }
 
 transformed parameters {
 vector[num_bills] sigma_adj;
 vector[num_legis] L_open;
-vector[num_bills] sigma_abs;
+//vector[num_bills] sigma_abs;
 sigma_adj = append_row(sigma,sigma_gov);
-sigma_abs = append_row(sigma_abs_open,abs_constrain);
+//sigma_abs = append_row(sigma_abs_open,abs_constrain);
 L_open = L_free;
 }
 
@@ -58,7 +59,7 @@ model {
   L_free ~ normal(0,1);
   sigma_abs_open ~normal(0,5);
   avg_particip ~ normal(0,5);
-  abs_constrain ~ normal(0,5);
+  //abs_constrain ~ normal(0,5);
 	
   B_yes ~ normal(0,5);
   B_abs ~ normal(0,5);
@@ -66,7 +67,7 @@ model {
   //model
   for(n in 1:N) {
       pi1[n] = sigma_adj[bb[n]] *  L_open[ll[n]] - B_yes[bb[n]];
-      pi2[n] = sigma_abs[bb[n]] * L_open[ll[n]] - B_abs[bb[n]] + avg_particip * particip[ll[n]];
+      pi2[n] = sigma_abs_open[bb[n]] * L_open[ll[n]] - B_abs[bb[n]] + avg_particip * particip[ll[n]];
   if(absence[n]==1) {
 	  /* target += log_sum_exp(bernoulli_lpmf(1 | theta),
 	  bernoulli_lpmf(0 | theta) + bernoulli_logit_lpmf(0 | pi2[n])); */
