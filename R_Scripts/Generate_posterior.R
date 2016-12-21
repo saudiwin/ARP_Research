@@ -6,7 +6,7 @@ num_bills <- ncol(vote_matrix)
 legislator_points <- rep(1:num_legis,times=num_bills)
 bill_points <- rep(1:num_bills,each=num_legis)
 N <- length(bill_points)
-to_use <- sample(1:nrow(lookat_params[[1]]),200)
+to_use <- sample(1:nrow(params[[1]]),200)
 
 post_predict3 <- sapply(to_use,function(x) {
   pi1 <- matrix(nrow=N,ncol=ncol(params$steps_votes)+1)
@@ -46,3 +46,11 @@ correct_cat <- apply(post_predict3,2,function(x) {
 })
 (rowMeans(correct_cat))
 sum((rowMeans(correct_cat)) * (all_counts/length(Y)))
+
+lambdas <-  apply(post_predict3,2,function(x) {
+  Lambda(x,Y)
+})
+
+gammas <- apply(post_predict3,2,function(x) {
+  GoodmanKruskalGamma(x,Y)
+})

@@ -16,7 +16,7 @@ require(archivist)
 # Keep legislators with have voted on at least this many bills
 keep_legis <- 1
 # Use only the parties in the subset_party variable?
-use_subset <- TRUE
+use_subset <- FALSE
 subset_party <- c("Bloc Al Horra","Mouvement Nidaa Tounes",'Front Populaire')
 # Check out partial credit IRT
 categorical <- FALSE
@@ -133,7 +133,7 @@ model_code <- readChar(script_file,file.info(script_file)$size)
 #Identification happens by assigning the last bill to be a reference category for the other bills
 # And using an informative normal prior on the legislator points
 # Best fit so far for 3-choice ordinal: N(0,5) on ideal points, sigma ~ N(0,5),N(1,.1) on cutpoints
-
+source('R_Scripts/vb_starts.R')
 starts <- readRDS('vb_starts.rds')
 make_starts <- function() {
   starts
@@ -170,7 +170,7 @@ sample_fit <- sampling(compiled_model,data = list(Y=Y, N=length(Y), num_legis=nu
                                               bill_pos=to_fix$constraint_num,
                        opp_num=opp_num,gov_num=gov_num,particip=participation$particip_rate),
                        init=make_starts,
-                       iter=5000,chains=4,cores=4,thin=4)
+                       iter=2000,chains=4,cores=4,thin=4)
 
 
 }
@@ -237,7 +237,7 @@ data_frame(sigma_est=sigmas2_est$avg,chisq=chisqs) %>% ggplot(aes(x=sigma_est,y=
   stat_smooth(method = 'lm')
 colnames(vote_matrix)[1280]
 
-xtabs(~Bill_3941+ party_id,data=check_matrix)
+xtabs(~Bill_3897+ party_id,data=check_matrix)
 
 # sigmas2_est <- arrange(sigmas2_est,avg)
 # keep_cols <- as.numeric(stringr::str_extract(sigmas2_est$param_name,'[0-9]+')[1:20])
