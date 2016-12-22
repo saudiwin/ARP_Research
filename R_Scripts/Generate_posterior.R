@@ -1,5 +1,5 @@
 # Given a sample_fit object, we want to generate the posterior predictive distribution
-
+require(DescTools)
 params <- rstan::extract(sample_fit)
 num_legis <- nrow(vote_matrix)
 num_bills <- ncol(vote_matrix)

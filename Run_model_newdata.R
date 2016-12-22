@@ -97,7 +97,7 @@ bill_points <- rep(1:num_bills,each=num_legis)
 # Need average participation by legislator
 
 participation <- cleaned[[legislature]] %>% gather(bill,vote,matches('Bill')) %>% group_by(legis.names) %>% 
-  summarize(particip_rate=1 - (sum(vote==4)/length(vote)))
+  summarize(particip_rate=1 - (sum(vote==4)/length(vote))) %>% mutate(particip_rate=scale(particip_rate))
 
 
 
@@ -178,7 +178,7 @@ saveRDS(sample_fit,'most_recent_fit.rds')
 Sys.setenv("plotly_username" = "bobkubinec")
 Sys.setenv("plotly_api_key" = "8q00qm53km")
 
-png(filename='split_absence_final.png',width=1024,height=1600,res=120)
+png(filename='split_absence_final.png',width=4000,height=4000,res=200)
 plot_IRT(cleaned=cleaned,stan_obj=sample_fit,legislature="arp_votes",plot_param='L_open',ggplot=TRUE)
 dev.off()
 

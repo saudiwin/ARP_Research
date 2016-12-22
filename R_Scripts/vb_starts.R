@@ -33,4 +33,7 @@ start_params <- lapply(start_params, function(x) {
   }
   return(as.numeric(x))
 })
+keep_cols <- as.numeric(stringr::str_extract(sigmas$param_name,'[0-9]+')[1:60])
+start_params$sigma_gov <- start_params$sigma[keep_cols]
+start_params$sigma <- start_params$sigma[-keep_cols]
 saveRDS(start_params, 'vb_starts.rds')
