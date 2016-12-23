@@ -61,18 +61,6 @@ to_fix <- fix_bills_discrim(opp='Front Populaire',gov="Mouvement Nidaa Tounes",
                             vote_data=cleaned,legislature=legislature,to_run=to_run,use_nas=use_nas)
 
 # Prepare matrix for model 
-
-new_vote_matrix <- apply(readRDS('vote_matrix.rds'),2,function(x) {
-  x <- ifelse(x>3,1,-1)
-})
-require(emIRT)
-abs_model <- binIRT(.rc=list(votes=new_vote_matrix),
-                    .starts=getStarts(nrow(new_vote_matrix),
-                                      ncol(new_vote_matrix),1),
-                    .priors=makePriors(nrow(new_vote_matrix),
-                                       ncol(new_vote_matrix),1))
-discrims <- data_frame(discrims=abs_model$means$beta[,1],bills=colnames(new_vote_matrix)) %>% 
-  arrange(desc(discrims))
 to_fix$gov <- readRDS('keep_cols_gov.rds')
 
 #to_fix$gov <- NULL
