@@ -198,23 +198,17 @@ mcmc_trace(posterior,pars="avg_particip")
 #saveToLocalRepo(summary(sample_fit),'data/',userTags=c('empirical','ordinal split absence constrain ZIP','ref_discrim','no parentheses'))
 
 
-check_summary <- summary(sample_fit)[[1]]
-sigmas <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summary)) %>% 
-  filter(grepl('sigma_adj',x = params)) %>% mutate(bill_labels=names(cleaned[[legislature]])[-(1:4)]) 
-sigmas2 <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summary)) %>% 
-  filter(grepl('sigma_abs',x = params))
-betas <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summary)) %>% 
-  filter(grepl('B_yes',x = params)) %>% mutate(bill_labels=names(cleaned[[legislature]])[-(1:4)]) 
-betas2 <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summary)) %>% 
-  filter(grepl('B_abs',x = params)) %>% mutate(bill_labels=names(cleaned[[legislature]])[-(1:4)]) 
-alphas <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summary)) %>% 
-  filter(grepl('L_open',x = params))
 
-data_frame(sigma=sigmas$mean,beta=betas$mean) %>% ggplot(aes(x=beta,y=sigma)) + geom_point(alpha=0.5) + theme_minimal() + 
-  stat_smooth(method = 'lm')
 
-data_frame(beta2=betas2$mean,beta=betas$mean) %>% ggplot(aes(x=beta,y=beta2)) + geom_point(alpha=0.5) + theme_minimal() + 
-  stat_smooth(method = 'lm')
+
+# alphas <- check_summary %>% as_data_frame %>% mutate(params=row.names(check_summary)) %>% 
+#   filter(grepl('L_open',x = params))
+# 
+# data_frame(sigma=sigmas$mean,beta=betas$mean) %>% ggplot(aes(x=beta,y=sigma)) + geom_point(alpha=0.5) + theme_minimal() + 
+#   stat_smooth(method = 'lm')
+# 
+# data_frame(beta2=betas2$mean,beta=betas$mean) %>% ggplot(aes(x=beta,y=beta2)) + geom_point(alpha=0.5) + theme_minimal() + 
+#   stat_smooth(method = 'lm')
 
 #Keep only 1 chain
 
@@ -222,10 +216,6 @@ lookat_params <- rstan::extract(sample_fit,permuted=FALSE)
 lookat_params <- lookat_params[,2,]
 sigmas_est <- lookat_params[,grepl('sigma_adj',colnames(lookat_params))]
 sigmas2_est <- lookat_params[,grepl('sigma_abs\\[',colnames(lookat_params))]
-sigmas_est <- sigmas_est %>% as_data_frame %>% gather(param_name,value) %>% group_by(param_name) %>% 
-    summarize(avg=mean(value),high=quantile(value,0.95),low=quantile(value,0.05))
-sigmas2_est <- sigmas2_est %>% as_data_frame %>% gather(param_name,value) %>% group_by(param_name) %>% 
-  summarize(avg=mean(value),high=quantile(value,0.95),low=quantile(value,0.05))
 
 chisqs <- apply(vote_matrix,2,function(x) {
   x <- table(x)
