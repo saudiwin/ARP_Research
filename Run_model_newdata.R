@@ -67,7 +67,7 @@ to_fix$gov <- readRDS('keep_cols_gov.rds')
 vote_matrix <- prepare_matrix(cleaned=cleaned,legislature=legislature,to_fix_type=identify,
                               to_fix=to_fix,
                               to_pin_bills=c('no_gov','no_opp'),
-                              split_absences=split_absences,absent_bill=readRDS('keep_cols_abs.rds'),
+                              split_absences=split_absences,absent_bill='Bill_3986',
                               to_run=to_run,use_nas=use_nas)
 
 if(identify=='ref_discrim') {
@@ -85,7 +85,7 @@ bill_points <- rep(1:num_bills,each=num_legis)
 # Need average participation by legislator
 
 participation <- cleaned[[legislature]] %>% gather(bill,vote,matches('Bill')) %>% group_by(legis.names) %>% 
-  summarize(particip_rate=1 - (sum(vote==4)/length(vote))) %>% mutate(particip_rate=scale(particip_rate))
+  summarize(particip_rate=1 - (sum(vote==4)/length(vote))) %>% mutate(particip_rate=scale(particip_rate)[,1])
 
 
 
