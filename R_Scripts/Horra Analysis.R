@@ -53,3 +53,34 @@ combined_members$vote_match <- paste0(combined_members$type,"_",combined_members
 combined_votes <- rbind.data.frame(arp_votes,anc_votes,fill=TRUE)
 combined_votes <- merge(combined_votes,member_data,by.x='legis.names',by.y='legis_names',all.x=TRUE)
 combined_votes$vote_match <- paste0(combined_votes$type,"_",combined_votes$legis.names)
+
+# Create ideal point cutoffs
+# bill_ideal <- rnorm(1000,1)
+# legis_ideal <- rnorm(1000,1)
+# raw_scores <- dnorm(bill_ideal,legis_ideal,0.5,log=TRUE)
+# cuts <- quantile(raw_scores,probs = c(0.25,0.5,0.75))
+# cut_breaks <- cuts[2:3] - cuts[1:2]
+
+means_fit <- summary(sample_fit)[[1]]
+legis_means <- as.data.table(means_fit[grepl("L_open\\[",row.names(means_fit)),])
+legis_means$vote_match <- row.names(all_matrices[[to_run]])
+legis_means <- merge(legis_means,combined_members,by.x='vote_match',by.y='vote_match',all.x = TRUE)
+
+# Plot Stan version points as a summary
+legis_means <- legis_means[order(mean),]
+
+ggplot(legis_means,aes(y=reorder(legis_names,mean),x=mean,colour=parliament_bloc)) + geom_point() + my_theme +
+  geom_text(aes(label=legis_names),check_overlap = TRUE,hjust=2) + facet_wrap(~type) +
+  geom_vline(xintercept=0) + theme(axis.text.y=element_blank(),axis.ticks.y=element_blank()) +
+  geom_errorbarh(aes(xmin=`2.5%`,xmax=`97.5%`)) + ylab("") + xlab("Political Position (Right versus Left)") 
+
+ggsave("output_graphs/Combined_ARP_ANC.pdf",width=20,height=15,units="in")
+
+# Combined without facet
+
+ggplot(legis_means,aes(y=reorder(legis_names,mean),x=mean,colour=parliament_bloc)) + geom_point() + my_theme +
+  geom_text(aes(label=reorder(legis_names,mean)),check_overlap = TRUE,hjust=2) + 
+  geom_vline(xintercept=0) + theme(axis.text.y=element_blank(),axis.ticks.y=element_blank()) +
+  geom_errorbarh(aes(xmin=`2.5%`,xmax=`97.5%`)) + ylab("") + xlab("Political Position (Right versus Left)") 
+
+ggsave("output_graphs/ARP_ANC_all.pdf",width=20,height=15,units="in")
