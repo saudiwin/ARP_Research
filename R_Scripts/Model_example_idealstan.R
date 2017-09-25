@@ -84,8 +84,8 @@ row.names(vote_matrix) <- arp_votes$legis.names
 legis_data <- mutate(arp_members,legis.names=legis_names,orig_order=1:n(),
                      vote_matrix_order=match(arp_members$legis_names, arp_votes$legis.names),
                      party=factor(parliament_bloc,levels=c('Aucun bloc',
-                                                           "Afek Tounes, le mouvement national et l'appel des tunisiens à l'étranger",
-                                                           'Bloc Social-Démocrate',
+                                                           "Afek Tounes, le mouvement national et l'appel des tunisiens \xe0 l'\xe9tranger",
+                                                           'Bloc Social-D\xe9mocrate',
                                                            'Front Populaire',
                                                            'Mouvement Ennahdha',
                                                            'Mouvement Nidaa Tounes',
@@ -95,36 +95,57 @@ legis_data <- mutate(arp_members,legis.names=legis_names,orig_order=1:n(),
   arrange(vote_matrix_order)
 
 ideal_data <- make_idealdata(vote_data=vote_matrix,legis_data=legis_data,
-                            no_vote = 'contre',abst_vote = 'abstenu',yes_vote = 'pour',abs_vote='')
+                             no_vote = 'contre',abst_vote = 'abstenu',yes_vote = 'pour',abs_vote='')
 
-#ideal_model <- estimate_ideal(idealdata=ideal_data,use_vb = TRUE,modeltype = 'ratingscale_absence_inflate')
-ideal_model <- readRDS('idealstan_arp_vb.rds')
+ideal_model <- estimate_ideal(idealdata=ideal_data,use_vb = FALSE,ncores=4,
+                              modeltype = 'ratingscale_absence_inflate',nfix=c(10,10))
+#ideal_model <- readRDS('idealstan_arp_vb.rds')
 #Plotting works better if we adjust the colors
 
-ideal_model@vote_data@legis_data$party <- fct_recode(legis_data$party,
-                                                 O='None',
-                                                 G='AF',
-                                                 O='SD',
-                                                 O='FP',
-                                                 N='EN',
-                                                 T='NT',
-                                                 G='HO',
-                                                 G='UPL') %>% fct_relevel('T','N','G','O')
+ideal_model@vote_data@legis_data$party <- fct_collapse(legis_data$party,
+                                                     O=c('None','SD','FP'),
+                                                     G=c('AF','HO','UPL'),
+                                                     N='EN',
+                                                     `T`='NT') %>% fct_relevel('T','N','G','O')
 # create a custom palette
 
 party_palette <- c('T'="#0083C4",'N'="#00A2BF",'G'="#00ADBF",'O'="#00BF7F")
 party_palette2 <- c('T'='#762a83','N'='#af8dc3','G'='#e7d4e8','O'='#1b7837')
-outplot <- plot_model(ideal_model,party_overlap=TRUE,text_size_party=5,legis_labels=FALSE,party_color=FALSE,
+outplot <- plot_model(ideal_model,party_overlap=TRUE,text_size_party=5,legis_labels=FALSE,party_color=T,
                       legis_ci_alpha=0.3)
-# outplot + scale_color_brewer(palette='BuGn',
-#                              breaks=c('T','N','O','G'),
-#                              labels=c('Nidaa Tounes','Nahda','Other\nGoverning\nParty\n','Opposition')) +
-#   theme(legend.position = 'bottom')
-outplot + scale_color_manual(values=party_palette2,
+outplot + scale_color_brewer(palette='BuGn',
+                             breaks=c('T','N','O','G'),
+                             labels=c('Nidaa Tounes','Nahda','Other\nGoverning\nParty\n','Opposition')) +
+  theme(legend.position = 'bottom')
+outplot + scale_color_manual(values=party_palette2,breaks=c('T','N','O','G'),
                              labels=c('Nidaa Tounes','Nahda','Other\nGoverning\nParty\n','Opposition')) +
   theme(legend.position = 'bottom')
 
 ggsave(filename = 'all_arp_custom.pdf',width=12,height=8,units='in',scale = 1.2)
 plot_model(ideal_model,bill_plot='Bill_2771')
 
-ideal_model_bin <- estimate_ideal(idealdata=ideal_data,use_vb = TRUE)
+ideal_data <- make_idealdata(vote_data=vote_matrix,legis_data=legis_data,
+                             no_vote = 'contre',abst_vote = 'abstenu',yes_vote = 'pour',abs_vote='',
+                             inflate=FALSE)
+
+ideal_model_bin <- estimate_ideal(idealdata=ideal_data,use_vb = FALSE,modeltype = 'binary_2pl',
+                                  ncores=4,nfix=c(10,10))
+
+compare_models(
+  model1 = ideal_model,
+  model2 = ideal_model_bin,
+  rescale=F,
+  scale_flip = T,
+  labels = c('Absences', 'No Absences'),
+  hjust = -0.3,
+  palette='Paired',
+  color_direction=-1,
+  text_size_label = 2.2
+)
+
+ggsave(
+  filename = 'tunisia_ARP_compare.png',
+  width = 10,
+  height = 7,
+  units = 'in'
+)
