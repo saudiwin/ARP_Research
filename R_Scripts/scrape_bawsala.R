@@ -31,12 +31,12 @@ over_pages <- map_df(1:200,function(i) {
         law_title <- html_nodes(hmtl,'.red') %>% html_text
         print(law_title)
         law_date <- html_nodes(hmtl,'.col-5 .top-5') %>% html_text
-        if(length(law_date)==0) {
+        if(length(law_date)!=1) {
           law_data <- html_nodes(hmtl,'.red') %>% html_text
         }
         law_type <- html_nodes(hmtl,'.col-5 span') %>% html_text %>% 
           str_replace('Vote sur ','')
-        if(length(law_type)==0) {
+        if(length(law_type)!=1) {
           law_type <- html_nodes(hmtl,'.col-5 .grey') %>% html_text %>% 
             str_replace('Vote sur ','')
         }
@@ -63,12 +63,12 @@ over_pages <- map_df(1:200,function(i) {
       law_title <- html_nodes(hmtl,'.red') %>% html_text
       print(law_title)
       law_date <- html_nodes(hmtl,'.col-5 .top-5') %>% html_text
-      if(length(law_date)==0) {
+      if(length(law_date)!=1) {
         law_date <- html_nodes(hmtl,'.red') %>% html_text
       }
       law_type <- html_nodes(hmtl,'.col-5 span') %>% html_text %>% 
         str_replace('Vote sur ','')
-      if(length(law_type)==0) {
+      if(length(law_type)!=1) {
         law_type <- html_nodes(hmtl,'.col-5 .grey') %>% html_text %>% 
           str_replace('Vote sur ','')
       }
@@ -95,6 +95,7 @@ over_pages <- map_df(1:200,function(i) {
     return(over_sub_votes)
   })
   suivant <- remDr$findElements(using = 'css selector', ".pagination-next")
-  suivant$clickElement()
+  suivant[[1]]$clickElement()
+
   return(over_votes)
 })
