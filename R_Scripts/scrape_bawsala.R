@@ -3,13 +3,14 @@
 require(rvest)
 require(stringr)
 require(dplyr)
+require(readr)
 require(tidyr)
 require(purrr)
 require(RSelenium)
 
 remDr <- remoteDriver(remoteServerAddr = "localhost" 
                       , port = 4444L
-                      , browserName = "firefox"
+                      , browserName = "chrome"
 )
 remDr$open()
 remDr$navigate('https://majles.marsad.tn/2014/fr/votes')
@@ -82,7 +83,6 @@ over_pages <- map_df(1:200,function(i) {
       votes <- html_nodes(hmtl,'#votants .right-10')
       clean_votes <- str_extract(votes,'voted-[a-z]+') %>% 
         str_replace('voted-',"")
-      remDr$goBack()
       over_sub_votes <- data_frame(legis_names,
                         clean_votes,
                         law_title,
@@ -95,7 +95,13 @@ over_pages <- map_df(1:200,function(i) {
     return(over_sub_votes)
   })
   suivant <- remDr$findElements(using = 'css selector', ".pagination-next")
-  suivant[[1]]$clickElement()
 
+  suivant[[1]]$clickElement()
+  print('New Page')
   return(over_votes)
 })
+
+over_pages_distinct <- distinct(over_pages,law_title,law_type,legis_names,clean_votes,
+                                .keep_all=TRUE)
+saveRDS(over_pages_distinct,'data/all_bawala.rds')
+write_csv(over_pages_distinct,'data/all_bawsala.csv')
