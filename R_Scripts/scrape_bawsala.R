@@ -103,5 +103,5 @@ over_pages <- map_df(1:200,function(i) {
 
 over_pages_distinct <- distinct(over_pages,law_title,law_type,legis_names,clean_votes,
                                 .keep_all=TRUE)
-saveRDS(over_pages_distinct,'data/all_bawala.rds')
-write_csv(over_pages_distinct,'data/all_bawsala.csv')
+saveRDS(over_pages_distinct,'data/all_bawala2018.rds')
+write_csv(over_pages_distinct,'data/all_bawsala2018.csv')
