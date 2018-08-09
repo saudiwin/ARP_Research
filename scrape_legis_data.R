@@ -21,7 +21,7 @@ remDr$open()
 
 
 
-over_sessions <- map_df(1:8,function(s) {
+over_sessions <- lapply(1:8,function(s) {
   remDr$navigate('https://majles.marsad.tn/2014/fr/assemblee')
   click_thingy <- remDr$findElements(using='css selector','.link-select .select-arrow')
   click_thingy[[1]]$clickElement()
@@ -29,15 +29,27 @@ over_sessions <- map_df(1:8,function(s) {
   all_sessions <- remDr$findElements(using='css selector','#sidebar .active')
   
   # go to next session
-  
-  all_sessions[[length(webElems)+s]]$clickElement()
   webElems <- remDr$findElements(using = 'css selector', ".elu-nom")
+  all_sessions[[length(webElems)+s]]$clickElement()
+  
   # get name of sessions
   hmtl_small <- read_html(remDr$getCurrentUrl()[[1]])
   sess_name <- html_nodes(hmtl_small,'.link-select .select-current-label') %>% html_text()
   
-  over_pages <- map_df(1:length(webElems),function(i) {
+  over_pages <- lapply(1:length(webElems),function(i,
+                                                   list_name='default',
+                                                   list_pos='default',
+                                                   bloc_name='default',
+                                                   bloc_start='default',
+                                                   bloc_end='default',
+                                                   bloc2_name='default',
+                                                   bloc2_start='default',
+                                                   bloc2_end='default',
+                                                   education='default',
+                                                   education_year='default',
+                                                   pol_history='default') {
     webElems <- remDr$findElements(using = 'css selector', ".elu-nom")
+    if(i>length(webElems)) return(data_frame(her_name='MISSING'))
     webElems[[i]]$clickElement()
     
     hmtl <- read_html(remDr$getCurrentUrl()[[1]])
@@ -67,24 +79,27 @@ over_sessions <- map_df(1:8,function(s) {
     pol_history <- paste0(pol_history,collapse=' ')
 
     over_sub_votes <- data_frame(her_name,
-                                 list_name,
-                                 list_pos,
-                                 bloc_name,
-                                 bloc_start,
-                                 bloc_end,
-                                 bloc2_name=bloc2_name,
-                                 bloc2_start=bloc2_start,
-                                 bloc2_end=bloc2_end,
-                                 education,
-                                 education_year,
-                                 pol_history,
-                                 session=sess_name)
+                                 list_name)
+    # add in one by one because these may not exist
+    try({over_sub_votes$list_pos <- list_pos
+    over_sub_votes$bloc_name <- bloc_name
+    over_sub_votes$bloc_start <- bloc_start
+    over_sub_votes$bloc_end <- bloc_end
+    over_sub_votes$bloc2_name <- bloc2_name
+    over_sub_votes$bloc2_start <- bloc2_start
+    over_sub_votes$bloc2_end <- bloc2_end
+    over_sub_votes$education <- paste0(education,collapse=' ')
+    over_sub_votes$education_year <- paste0(education_year,collapse=' ')
+    over_sub_votes$pol_history <- paste0(pol_history,collapse=' ')})
+    
+    over_sub_votes$session <- sess_name
+
     remDr$goBack()
     return(over_sub_votes)
   })
   return(over_pages)
 })
-
+over_sessions <- bind_rows(lapply(over_sessions,bind_rows))
 readr::write_csv(over_sessions,'all_parliament_legisdata.csv')
 saveRDS(object = over_sessions,'all_parliament_legisdata.rds')
 

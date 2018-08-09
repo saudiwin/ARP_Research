@@ -19,7 +19,7 @@ remDr$navigate('https://majles.marsad.tn/2014/fr/votes')
 over_pages <- map_df(1:200,function(i) {
   webElems <- remDr$findElements(using = 'css selector', ".float+ div")
   # first get all votes on the main page
-  over_votes <- map_df(1:length(webElems),function(w) {
+  over_votes <- try(map_df(1:length(webElems),function(w) {
     webElems <- remDr$findElements(using = 'css selector', ".float+ div")
     webElems[[w]]$clickElement()
     # then get the list of all the sub-votes .projet-loi-vote
@@ -93,15 +93,26 @@ over_pages <- map_df(1:200,function(i) {
     
     remDr$goBack()
     return(over_sub_votes)
-  })
+  }))
   suivant <- remDr$findElements(using = 'css selector', ".pagination-next")
 
-  suivant[[1]]$clickElement()
+  try(suivant[[1]]$clickElement())
   print('New Page')
+  
+  if(class(over_votes)=='try-error') {
+    over_votes <- data_frame(legis_names='ERROR',
+                             clean_votes='ERROR',
+                             law_title='ERROR',
+                             law_date='ERROR',
+                             law_type='ERROR',
+                             absence_just='ERROR')
+  }
+  
   return(over_votes)
 })
 
-over_pages_distinct <- distinct(over_pages,law_title,law_type,legis_names,clean_votes,
-                                .keep_all=TRUE)
+over_pages_distinct <- distinct(select(over_pages,-law_data))
+
+over_pages_distinct <- filter(over_pages_distinct,law_title!='ERROR')
 saveRDS(over_pages_distinct,'data/all_bawala2018.rds')
 write_csv(over_pages_distinct,'data/all_bawsala2018.csv')
