@@ -20,7 +20,7 @@ select(clean_data,law_unique,law_date) %>%
   theme(panel.grid=element_blank()) +
   geom_vline(aes(xintercept=lubridate::ymd('2016-07-30')),
              linetype=2) +
-  annotate(geom='text',x=ymd('2016-11-30'),y=450,label='Carthage Agreement') +
+  annotate(geom='text',x=ymd('2016-07-30'),y=450,label='Carthage Agreement') +
   ggtitle('Legislative Activity in the Tunisian Parliament')
 ggsave('bill_density.png')
 

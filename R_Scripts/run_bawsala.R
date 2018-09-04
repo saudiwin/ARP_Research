@@ -170,8 +170,10 @@ estimate_all <- id_estimate(arp_ideal_data,use_vb = F,
                             use_ar=T,
                             id_diff=4,
                             time_sd=20,
-                            fixtype='vb',
-                            niters = 1000)
+                            fixtype='constrained',
+                            niters = 1000,
+                            ncores=3,
+                            nchains = 3)
 
 
 
