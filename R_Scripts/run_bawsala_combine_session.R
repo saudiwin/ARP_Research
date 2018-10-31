@@ -71,7 +71,6 @@ arp_ideal_data <- id_make(score_data = group_id,
                           item_id="law_unique",
                           time_id="law_date",
                           group_id="bloc",
-                          inflate=T,
                           person_data=distinct(select(group_id,person.names=legis_names,
                                                       group=bloc,
                                                       time=law_date)),
@@ -81,10 +80,9 @@ estimate_all <- id_estimate(arp_ideal_data,use_vb = T,
                             use_groups = T,
                             restrict_ind_high=1,
                             model_type=4,
-                            use_ar=T,
-                            id_diff=2,
-                            time_sd=20,
-                            fixtype='constrained')
+                            vary_ideal_pts = 'AR1',
+                            time_sd=.2,
+                            fixtype='vb_partial')
 
 saveRDS(estimate_all,'data/estimate_all_2groups_vb.rds')
 

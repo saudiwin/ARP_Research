@@ -13,21 +13,13 @@ require(xtable)
 
 group_id <- readr::read_csv('data/clean_votes_groups.csv')
 
+group_id$bloc <-  recode(group_id$bloc,
+                                                         `Afek Tounes et l'appel des tunisiens l'tranger`="Afek Tounes",
+                                                         `Bloc Social-Dmocrate`="Social-Démocrate",
+                                                         `Bloc Al Horra du Mouvement Machrouu Tounes`="Horra",
+                                                         `Mouvement Ennahdha`="Nahda",
+                                                         `Mouvement Nidaa Tounes`='Nidaa Tounes')
 
-# create vote matrix
-
-to_ideal_wide <- select(group_id,law_unique,clean_votes,legis_names) %>% 
-  spread(key = law_unique,value = clean_votes)
-
-# readr::write_csv(select(to_ideal,-same_day),'data/clean_bawsala_votes.csv')
-# 
-# check_ideal <- group_by(to_ideal,law_unique,legis_names) %>% 
-#   count %>% filter(n>1)
-
-vote_matrix <- dplyr::select(ungroup(to_ideal_wide),-legis_names) %>% as.matrix
-row.names(vote_matrix) <- to_ideal_wide$legis_names
-#colnames(vote_matrix) <- paste0('Bill_',1:ncol(vote_matrix))
-get_time <- distinct(select(ungroup(group_id),law_unique,law_date))
 arp_ideal_data <- id_make(score_data = group_id,
                           outcome="clean_votes",
                           person_id="legis_names",
@@ -35,28 +27,18 @@ arp_ideal_data <- id_make(score_data = group_id,
                           time_id="law_date",
                           group_id="bloc",
                           person_cov=~change,
-                          inflate=T,
-                          person_data=distinct(select(group_id,person.names=legis_names,
-                                                      group=bloc,
-                                                      time=law_date)),
                           miss_val=4L)
 
 estimate_all <- id_estimate(arp_ideal_data,use_vb = T,
-                            use_groups = T,nfix = 1,
-                            restrict_ind_high = 9,
-                            restrict_ind_low=7,
+                            use_groups = T,
+                            restrict_ind_high= "Nahda",
+                            restrict_ind_low="Front Populaire",
                             model_type=4,
-                            use_ar=T,
-                            id_diff=2,
-                            time_sd=20,
-                            fixtype='constrained')
+                            vary_ideal_pts = 'AR1',
+                            time_sd=.2,
+                            fixtype='vb_partial')
 
-estimate_all@score_data@score_matrix$group_id <-  recode(estimate_all@score_data@score_matrix$group_id,
-                                                                        `Afek Tounes et l'appel des tunisiens l'tranger`="Afek Tounes",
-                                                                        `Bloc Social-Dmocrate`="Social-Démocrate",
-                                                                        `Bloc Al Horra du Mouvement Machrouu Tounes`="Horra",
-                                                                        `Mouvement Ennahdha`="Nahda",
-                                                         `Mouvement Nidaa Tounes`='Nidaa Tounes')
+
 
 saveRDS(estimate_all,'data/estimate_all_vb.rds')
 
