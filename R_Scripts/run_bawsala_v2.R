@@ -20,38 +20,74 @@ group_id$bloc <-  recode(group_id$bloc,
                                                          `Mouvement Ennahdha`="Nahda",
                                                          `Mouvement Nidaa Tounes`='Nidaa Tounes')
 
+# to run this model, need to remove those parties over which the covariate is not defined
+# group_id <- filter(group_id,bloc %in% c('Nahda',
+#                                         'Nidaa Tounes',
+#                                         'Front Populaire',
+#                                         "Social-Démocrate",
+#                                         "Afek Tounes",
+#                                         "Union Patriotique Libre",
+#                                         "Alliance Dmocratique",
+#                                         "Independent"))
+
+# we need to complete the data for horra and others who aren't in every time point
+# this is for group covariate plotting
+group_id <- group_id %>% complete(law_date,nesting(bloc,change),fill=list(change=0))
+
+# first run an AR(1) model with covariates
+
 arp_ideal_data <- id_make(score_data = group_id,
                           outcome="clean_votes",
                           person_id="legis_names",
                           item_id="law_unique",
                           time_id="law_date",
                           group_id="bloc",
-                          person_cov=~change,
-                          miss_val=4L)
+                          group_cov=~change*bloc,
+                          miss_val="4")
 
-estimate_all <- id_estimate(arp_ideal_data,use_vb = T,
+
+
+estimate_all <- id_estimate(arp_ideal_data,use_vb = F,
                             use_groups = T,
                             restrict_ind_high= "Nahda",
                             restrict_ind_low="Front Populaire",
                             model_type=4,
+                            restrict_var = T,
+                            restrict_var_high = 0.1,
                             vary_ideal_pts = 'AR1',
-                            time_sd=.2,
-                            fixtype='vb_partial')
+                            time_sd=1,
+                            fixtype='vb_partial',niters = 1000)
 
 
 
-saveRDS(estimate_all,'data/estimate_all_vb.rds')
+saveRDS(estimate_all,'data/estimate_all_ar1_full.rds')
 
-id_plot_legis_dyn(estimate_all,highlight = c('Horra','Front Populaire',
-                                             'Nahda','Nidaa Tounes'),
-                  group_color=F,person_plot=F) +
+estimate_all <- id_estimate(arp_ideal_data,use_vb = F,
+                            use_groups = T,
+                            restrict_ind_high= "Nahda",
+                            restrict_ind_low="Front Populaire",
+                            model_type=4,
+                            restrict_var = T,
+                            restrict_var_high = 0.1,
+                            vary_ideal_pts = 'random_walk',
+                            time_sd=1,
+                            fixtype='vb_partial',niters=1000)
+
+
+
+saveRDS(estimate_all,'data/estimate_all_rw_full.rds')
+
+id_plot_legis_dyn(estimate_all,person_plot=F,use_ci = F) +
   geom_vline(aes(xintercept=lubridate::ymd('2016-07-30')),
              linetype=2) +
   scale_y_continuous(labels=c('More\nSecular','-1.0','-0.5','0.0','0.5','More\nIslamist'),
-                     breaks=c(-1.5,-1.0,-0.5,0.0,0.5,1.0)) +
-  facet_wrap(~group_id)
+                     breaks=c(-1.5,-1.0,-0.5,0.0,0.5,1.0))
 
 ggsave('party_over_time.png')
+
+id_plot_cov(estimate_all)
+id_plot_cov(estimate_all,filter_cov = c('change:blocHorra','change'))
+id_plot_legis_var(estimate_all)
 
 # pull out bill discrimination parameters 
 
