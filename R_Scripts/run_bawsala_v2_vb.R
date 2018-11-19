@@ -87,7 +87,7 @@ id_plot_cov(estimate_all) + scale_x_reverse(labels=c('More\nIslamist',
 
 ggsave('id_plot_cov_arp_all.png')
 
-id_plot_cov(estimate_all,filter_cov = c('change:blocHorra','change')) + scale_y_reverse()
+id_plot_cov(estimate_all,filter_cov = c('change:blocHorra','change'))
 
 ggsave('id_plot_cov_arp_horra.png')
 

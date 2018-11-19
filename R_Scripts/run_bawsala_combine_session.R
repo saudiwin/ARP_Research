@@ -82,7 +82,8 @@ estimate_all <- id_estimate(arp_ideal_data,use_vb = T,
                             model_type=4,
                             vary_ideal_pts = 'AR1',
                             time_sd=.2,
-                            fixtype='vb_partial')
+                            fixtype='vb_partial',
+                            tol_rel_obj=0.001)
 
 saveRDS(estimate_all,'data/estimate_all_2groups_vb.rds')
 

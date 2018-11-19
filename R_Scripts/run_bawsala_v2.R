@@ -53,7 +53,7 @@ estimate_all <- id_estimate(arp_ideal_data,use_vb = F,
                             restrict_ind_low="Front Populaire",
                             model_type=4,
                             restrict_var = T,
-                            restrict_var_high = 0.1,
+                            restrict_var_high = .25,
                             vary_ideal_pts = 'AR1',
                             time_sd=1,
                             fixtype='vb_partial',niters = 1000)
@@ -62,7 +62,28 @@ estimate_all <- id_estimate(arp_ideal_data,use_vb = F,
 
 saveRDS(estimate_all,'data/estimate_all_ar1_full.rds')
 
-estimate_all <- id_estimate(arp_ideal_data,use_vb = F,
+id_plot_legis_dyn(estimate_all,person_plot=F,use_ci = F) +
+  geom_vline(aes(xintercept=lubridate::ymd('2016-07-30')),
+             linetype=2) +
+  # scale_y_continuous(labels=c('More\nSecular','-1.0','-0.5','0.0','0.5','More\nIslamist'),
+  #                    breaks=c(-1.5,-1.0,-0.5,0.0,0.5,1.0)) +
+  facet_wrap(~group_id,scales='free_y')
+
+ggsave('party_over_time.png')
+
+id_plot_cov(estimate_all)
+id_plot_cov(estimate_all,filter_cov = c('change:blocHorra','change'))
+id_plot_legis_var(estimate_all)
+
+arp_ideal_data <- id_make(score_data = group_id,
+                          outcome="clean_votes",
+                          person_id="legis_names",
+                          item_id="law_unique",
+                          time_id="law_date",
+                          group_id="bloc",
+                          miss_val="4")
+
+estimate_all <- id_estimate(arp_ideal_data,use_vb = T,
                             use_groups = T,
                             restrict_ind_high= "Nahda",
                             restrict_ind_low="Front Populaire",
@@ -76,18 +97,6 @@ estimate_all <- id_estimate(arp_ideal_data,use_vb = F,
 
 
 saveRDS(estimate_all,'data/estimate_all_rw_full.rds')
-
-id_plot_legis_dyn(estimate_all,person_plot=F,use_ci = F) +
-  geom_vline(aes(xintercept=lubridate::ymd('2016-07-30')),
-             linetype=2) +
-  scale_y_continuous(labels=c('More\nSecular','-1.0','-0.5','0.0','0.5','More\nIslamist'),
-                     breaks=c(-1.5,-1.0,-0.5,0.0,0.5,1.0))
-
-ggsave('party_over_time.png')
-
-id_plot_cov(estimate_all)
-id_plot_cov(estimate_all,filter_cov = c('change:blocHorra','change'))
-id_plot_legis_var(estimate_all)
 
 # pull out bill discrimination parameters 
 
