@@ -64,6 +64,12 @@ group_id <- bind_rows(group_id,sessc) %>%
                                          "Union Patriotique Libre",
                                          "Transition D\xe9mocratique")))
 
+# Need a covariate for beginning of ARP
+
+group_id <- group_by(group_id,bloc) %>% 
+  mutate(change=as.numeric(law_date>lubridate::mdy('12-2-2014')))
+
+group_id$clean_votes <- factor(group_id$clean_votes)
 
 arp_ideal_data <- id_make(score_data = group_id,
                           outcome="clean_votes",
@@ -71,21 +77,20 @@ arp_ideal_data <- id_make(score_data = group_id,
                           item_id="law_unique",
                           time_id="law_date",
                           group_id="bloc",
-                          person_data=distinct(select(group_id,person.names=legis_names,
-                                                      group=bloc,
-                                                      time=law_date)),
-                          miss_val=4L)
+                          group_cov = ~change*bloc,
+                          miss_val="4")
 
 estimate_all <- id_estimate(arp_ideal_data,use_vb = T,
                             use_groups = T,
-                            restrict_ind_high=1,
+                            restrict_ind_high="Islamists",
+                            restrict_ind_low = "Secularists",
                             model_type=4,
                             vary_ideal_pts = 'AR1',
-                            time_sd=.2,
+                            time_sd=.25,
                             fixtype='vb_partial',
-                            tol_rel_obj=0.001)
+                            tol_rel_obj=0.0001)
 
-saveRDS(estimate_all,'data/estimate_all_2groups_vb.rds')
+saveRDS(estimate_all,'data/estimate_all_2groups_ar_vb.rds')
 
 id_plot_legis_dyn(estimate_all,
                   group_color=F,person_plot=F,text_size_label=8) +
@@ -94,14 +99,50 @@ id_plot_legis_dyn(estimate_all,
   geom_vline(aes(xintercept=lubridate::ymd('2014-10-26')),
              linetype=3) +
   annotate(geom='text',x=ymd('2016-07-30'),y=0.9,label=' Carthage Agreement') +
-  annotate(geom='text',x=ymd('2014-10-26'),y=0.65,label='New Parliament\nSession') +
+  annotate(geom='text',x=ymd('2014-12-2'),y=0.65,label='New Parliament\nSession') +
   scale_y_continuous(labels=c('More\nSecular','0.0','0.5','More\nIslamist'),
                      breaks=c(-0.5,0.0,0.5,1.0)) +
   scale_color_discrete(guide='none') + 
   scale_x_date(date_breaks = '1 year',
                date_labels='%Y')
 
-ggsave('party_over_time_2groups_1mo.png')
+ggsave('party_over_time_2groups_1mo_ar.png')
+
+arp_ideal_data <- id_make(score_data = group_id,
+                          outcome="clean_votes",
+                          person_id="legis_names",
+                          item_id="law_unique",
+                          time_id="law_date",
+                          group_id="bloc",
+                          miss_val="4")
+
+estimate_all_rw <- id_estimate(arp_ideal_data,use_vb = T,
+                            use_groups = T,
+                            restrict_ind_high="Islamists",
+                            restrict_ind_low = "Secularists",
+                            model_type=4,
+                            vary_ideal_pts = 'random_walk',
+                            time_sd=.2,
+                            fixtype='vb_partial',
+                            tol_rel_obj=0.0001)
+
+saveRDS(estimate_all_rw,'data/estimate_all_2groups_rw_vb.rds')
+
+id_plot_legis_dyn(estimate_all_rw,
+                  group_color=F,person_plot=F,text_size_label=8) +
+  geom_vline(aes(xintercept=lubridate::ymd('2016-07-30')),
+             linetype=2) +
+  geom_vline(aes(xintercept=lubridate::ymd('2014-10-26')),
+             linetype=3) +
+  annotate(geom='text',x=ymd('2016-07-30'),y=0.9,label=' Carthage Agreement') +
+  annotate(geom='text',x=ymd('2014-12-2'),y=0.65,label='New Parliament\nSession') +
+  scale_y_continuous(labels=c('More\nSecular','0.0','0.5','More\nIslamist'),
+                     breaks=c(-0.5,0.0,0.5,1.0)) +
+  scale_color_discrete(guide='none') + 
+  scale_x_date(date_breaks = '1 year',
+               date_labels='%Y')
+
+ggsave('party_over_time_2groups_1mo_rw.png')
 
 # pull out bill discrimination parameters 
 
