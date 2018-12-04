@@ -20,3 +20,79 @@ comb_data <- readRDS('data/combine_sessions.rds')
 # see how long it takes to do predictions
 
 all_pred <- id_post_pred(group2_rw)
+
+# now calculate using apply function
+
+all_data <- readRDS('data/combine_sessions.rds')
+
+correct <- apply(all_pred,1,function(col) {
+  col==as.numeric(all_data$clean_votes)
+})
+
+# overall plot
+id_plot_ppc(group2_rw,all_pred) + scale_x_discrete(labels=c('No','Abstain','Yes',"Abstain"))
+
+ggsave('overall_pred.png')
+
+plot_pred <- bind_cols(select(ungroup(all_data),law_date,legis_names,clean_votes),as_data_frame(correct)) %>% 
+  gather(key = iter,value=predicted,-law_date,-legis_names,-clean_votes)
+
+all_sum <- plot_pred %>% 
+  mutate(Type=factor(clean_votes,labels=c('No',
+                                          'Abstain',
+                                          'Yes',
+                                          'Absent'))) %>% 
+  group_by(law_date) %>% 
+  mutate(law_n=n()) %>% 
+  group_by(law_date,Type,iter) %>% 
+  # need to create percentage imiprovement over baseleine
+  summarize(perc_correct_iter=(mean(predicted) - (n()/law_n[1]))/(n()/law_n[1])) %>% 
+  group_by(law_date,Type) %>% 
+  mutate(perc_correct=median(perc_correct_iter),
+            perc_correct_high=quantile(perc_correct_iter,.95),
+            perc_correct_low=quantile(perc_correct_iter,.05))
+
+ggplot(all_sum,aes(y=perc_correct,
+             x=law_date)) +
+  geom_ribbon(aes(ymin=perc_correct_low,
+                  ymax=perc_correct_high,
+                  fill=Type),alpha=0.5) +
+  stat_smooth(aes(y=perc_correct_iter)) +
+  geom_line(aes(linetype=Type)) +
+  theme(panel.grid = element_blank(),
+        panel.background = element_blank(),
+        strip.background = element_blank()) +
+  xlab('') +
+  ylab('Percent Improvement Over Null Model') +
+  facet_wrap(~Type,scales='free_y') +
+  geom_hline(yintercept = 100,linetype=2)
+
+ggsave('obs_vs_abs_pred.png')
+
+all_sum_votes <- plot_pred %>% 
+  mutate(Type=factor(clean_votes,labels=c('No',
+                                          'Abstain',
+                                          'Yes',
+                                          'Absent'))) %>% 
+  group_by(law_date,Type,iter) %>% 
+  summarize(perc_correct_iter=mean(predicted)) %>% 
+  group_by(law_date,Type) %>% 
+  summarize(perc_correct=median(perc_correct_iter),
+            perc_correct_high=quantile(perc_correct_iter,.95),
+            perc_correct_low=quantile(perc_correct_iter,.05))
+
+ggplot(all_sum_votes,aes(y=perc_correct,
+                   x=law_date)) +
+  geom_ribbon(aes(ymin=perc_correct_low,
+                  ymax=perc_correct_high,
+                  fill=Type),alpha=0.5) +
+  geom_line(aes(linetype=Type)) +
+  theme(panel.grid = element_blank(),
+        panel.background = element_blank(),
+        strip.background = element_blank()) +
+  xlab('') +
+  ylab('Percent Correctly Predicted') +
+  scale_y_continuous(labels=scales::percent) +
+  facet_wrap(~Type)
+
+ggsave('all_vote_types_pred.png')
