@@ -15,6 +15,54 @@ arp_rw <- readRDS('data/estimate_all_rw_vb.rds')
 group2_ar1 <- readRDS('data/estimate_all_2groups_ar_vb.rds')
 group2_rw <- readRDS('data/estimate_all_2groups_rw_vb.rds')
 
+# basic descriptives
+
+# move plot to bawsala plot
+
+all_data <- readRDS('data/combine_sessions.rds')
+
+select(all_data,law_unique,law_date) %>% 
+  distinct %>% 
+  ggplot(aes(x=law_date)) + geom_histogram(fill='grey',
+                                           colour=NA) + 
+  theme_minimal() + xlab('') + ylab('Number of Roll Call Votes') +
+  theme(panel.grid=element_blank()) +
+  geom_vline(aes(xintercept=lubridate::ymd('2016-07-30')),
+             linetype=2) +
+  annotate(geom='text',x=ymd('2016-07-30'),y=450,label='Carthage Agreement') +
+  ggtitle('Legislative Activity in the Tunisian Parliament')
+ggsave('bill_density.png')
+
+# test with linear model
+
+# need ideal point scores
+
+all_scores <- summary(group2_rw,aggregate=F) %>% 
+  group_by(Time_Point) %>% 
+  summarize(polar=median(Ideal_Points[Group=='Islamists']) - median(Ideal_Points[Group=='Secularists']),
+            polar_high=quantile(Ideal_Points[Group=='Islamists'],.95) - quantile(Ideal_Points[Group=='Secularists'],.95),
+            polar_low=quantile(Ideal_Points[Group=='Islamists'],.05) - quantile(Ideal_Points[Group=='Secularists'],.05)) %>% 
+  left_join(all_data,by=c(Time_Point='law_date'))
+
+all_scores %>% 
+  distinct(polar,Time_Point,.keep_all = T) %>% 
+  ggplot(aes(y=polar,x=Time_Point)) +
+  geom_line(linetype=2,size=1) +
+  geom_ribbon(aes(ymin=polar_high,
+                  ymax=polar_low),
+              fill='grey80',
+              alpha=0.5) +
+  ylab('Difference Between Islamists and Secularists') +
+  xlab('') +
+  theme(panel.grid=element_blank(),
+        panel.background = element_blank())
+
+ggsave('diff_over_time.png')
+
+all_scores_dist <- distinct(all_scores,polar,Time_Point,law_unique) %>% 
+  count(polar,Time_Point)
+
+summary(lm(n~polar,data=all_scores_dist))
 
 # ARP AR1 ---------------------------------------------------
 
@@ -130,11 +178,22 @@ ggsave('party_over_time_2groups_1mo_ar.png')
 id_plot_cov(group2_ar1) +
   ggtitle('Effect of 2014 Election on Party-level Ideal Points',
           subtitle = 'Based on Rollcall Vote Data from 1st and 2nd Sessions of Tunisian Parliament') +
-  scale_x_continuous(labels=c('More\nSecular','0.0','More\nIslamist'),
-                     breaks=c(-0.5,0.0,0.5)) 
+  scale_x_continuous(labels=c('More\nSecular','-0.25','0.0','0.25','More\nIslamist'),
+                     breaks=c(-0.5,-0.25,0.0,0.25,0.5)) 
 
 ggsave('id_plot_cov_2groups.png')
 
+# calculate interaction for Islamists
+
+cov_iter <- rstan::extract(group2_ar1@stan_samples,'legis_x')
+
+median(cov_iter[[1]][,3] + cov_iter[[1]][,4])
+quantile(cov_iter[[1]][,3] + cov_iter[[1]][,4],.95)
+quantile(cov_iter[[1]][,3] + cov_iter[[1]][,4],.05)
+
+median(cov_iter[[1]][,3])
+quantile(cov_iter[[1]][,3],.95)
+quantile(cov_iter[[1]][,3],.05)
 
 
 # bill discrim ------------------------------------------------------------

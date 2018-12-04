@@ -10,19 +10,8 @@ require(stringr)
 require(forcats)
 
 
-clean_data <- readr::read_csv('data/clean_votes_groups.csv')
 
-select(clean_data,law_unique,law_date) %>% 
-  distinct %>% 
-  ggplot(aes(x=law_date)) + geom_histogram(fill='grey',
-                                                   colour=NA) + 
-  theme_minimal() + xlab('') + ylab('Number of Roll Call Votes') +
-  theme(panel.grid=element_blank()) +
-  geom_vline(aes(xintercept=lubridate::ymd('2016-07-30')),
-             linetype=2) +
-  annotate(geom='text',x=ymd('2016-07-30'),y=450,label='Carthage Agreement') +
-  ggtitle('Legislative Activity in the Tunisian Parliament')
-ggsave('bill_density.png')
+clean_data <- readr::read_csv('data/clean_votes_groups.csv')
 
 # get blocs 
 source('R_Scripts/import_legis.R')

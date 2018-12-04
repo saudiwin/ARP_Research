@@ -63,12 +63,27 @@ ggplot(all_sum,aes(y=perc_correct,
   theme(panel.grid = element_blank(),
         panel.background = element_blank(),
         strip.background = element_blank()) +
+  geom_vline(xintercept=ymd('2014-12-2'),linetype=2) +
   xlab('') +
   ylab('Percent Improvement Over Null Model') +
   facet_wrap(~Type,scales='free_y') +
-  geom_hline(yintercept = 100,linetype=2)
+  geom_hline(yintercept = 100,linetype=2) + 
+  guides(fill='none',linetype='none')
 
 ggsave('obs_vs_abs_pred.png')
+
+# correlation between different types of votes
+# drop those that don't have all 4 vote categories
+
+all_sum <- group_by(all_sum,law_date) %>% 
+  mutate(n_cat=length(unique(Type)))
+
+yes <- filter(all_sum,Type=="Yes",n_cat==4) %>% pull(perc_correct)
+no <- filter(all_sum,Type=="No",n_cat==4) %>% pull(perc_correct)
+abstain <- filter(all_sum,Type=="Abstain",n_cat==4) %>% pull(perc_correct)
+absent <- filter(all_sum,Type=="Absent",n_cat==4) %>% pull(perc_correct)
+
+cor(cbind(yes,no,abstain,absent))
 
 all_sum_votes <- plot_pred %>% 
   mutate(Type=factor(clean_votes,labels=c('No',
@@ -78,7 +93,7 @@ all_sum_votes <- plot_pred %>%
   group_by(law_date,Type,iter) %>% 
   summarize(perc_correct_iter=mean(predicted)) %>% 
   group_by(law_date,Type) %>% 
-  summarize(perc_correct=median(perc_correct_iter),
+  mutate(perc_correct=median(perc_correct_iter),
             perc_correct_high=quantile(perc_correct_iter,.95),
             perc_correct_low=quantile(perc_correct_iter,.05))
 
@@ -97,4 +112,11 @@ ggplot(all_sum_votes,aes(y=perc_correct,
   facet_wrap(~Type)
 
 ggsave('all_vote_types_pred.png')
+
+# overall predictive validity table 
+
+prop.table(table(all_data$clean_votes))
+group_by(all_sum_votes,Type) %>% summarize(median_cor=median(perc_correct_iter),
+                                     high_cor=quantile(perc_correct_iter,.95),
+                                     low_cor=quantile(perc_correct_iter,.05))
 
