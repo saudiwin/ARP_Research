@@ -64,7 +64,32 @@ all_scores_dist <- distinct(all_scores,polar,Time_Point,law_unique) %>%
 
 summary(lm(n~polar,data=all_scores_dist))
 
-# ARP AR1 ---------------------------------------------------
+# plot relative approval of project (aid) finance
+
+all_data <- mutate(all_data,
+                   proj_finance=grepl(x=law_unique,
+                                      pattern='financement du projet') & grepl(x=law_unique,
+                                                                               pattern='accord'))
+
+all_data %>% group_by(law_date) %>% 
+  summarize(mean_proj=mean(proj_finance)) %>% 
+  ggplot(aes(y=mean_proj,
+             x=law_date)) +
+  geom_col() + 
+  scale_y_continuous(labels=scales::percent) +
+  theme(panel.grid = element_blank(),
+        panel.background = element_blank()) +
+  xlab('') + 
+  ylab('Percentage of Votes') +
+  geom_vline(xintercept = ymd('2015-02-01'),linetype=2) +
+  annotate('text',
+           x=ymd('2013-12-01'),
+           y=.25,
+           label='2015 National Unity Government Formed')
+
+ggsave('vote_finance.png')
+
+ # ARP AR1 ---------------------------------------------------
 
 # need to reverse the scale because the ID strategy ends up reversing itself
 # for compatibility with the RW model
