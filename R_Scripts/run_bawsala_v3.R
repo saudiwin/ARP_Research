@@ -53,7 +53,7 @@ arp_ideal_data <- id_make(score_data = all_votes,
 
 
 
-estimate_all <- id_estimate(arp_ideal_data,use_vb = F,
+estimate_all <- id_estimate(arp_ideal_data,
                             use_groups = T,
                             restrict_ind_high= "Nahda",
                             restrict_ind_low="Front Populaire",
@@ -86,16 +86,14 @@ arp_ideal_data <- id_make(score_data = group_id,
                           group_id="bloc",
                           miss_val="4")
 
-estimate_all <- id_estimate(arp_ideal_data,use_vb = T,
+estimate_all <- id_estimate(arp_ideal_data,
                             use_groups = T,
                             restrict_ind_high= "Nahda",
                             restrict_ind_low="Front Populaire",
+                            restrict_sd_low = 3,
                             model_type=4,
-                            restrict_var = T,
-                            restrict_var_high = 0.1,
                             vary_ideal_pts = 'random_walk',
-                            time_sd=1,
-                            fixtype='vb_partial',niters=1000)
+                            fixtype='prefix',niters=1000)
 
 
 
