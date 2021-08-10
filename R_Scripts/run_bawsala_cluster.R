@@ -30,7 +30,8 @@ all_votes <-  mutate(all_votes,mp_bloc_name=recode(mp_bloc_name,
                      vote_title=coalesce(vote_title,as.character(vote_date)),
                      bill_id=fct_anon(fct_cross(vote_title,law_title)),
                      vote_choice=factor(vote_choice,levels=c("NO","ABSTAIN","YES")),
-                     change=as.numeric(vote_date>ymd("2016-07-13")))
+                     change=as.numeric(vote_date>ymd("2016-07-13")),
+                     ordered_id=3)
                      
 
 # to run this model, need to remove those parties over which the covariate is not defined
@@ -66,7 +67,7 @@ estimate_all <- id_estimate(arp_ideal_data,
                             restrict_sd_low = 3,
                             fix_low = 0,
                             model_type=4,save_files="/scratch/rmk7/arp/junk/",
-                            vary_ideal_pts = 'AR1',nchains = 2,
+                            vary_ideal_pts = 'AR1',nchains = 4,
                             ncores = parallel::detectCores(),
                             fixtype='prefix',niters = 500,id_refresh=10)
 
