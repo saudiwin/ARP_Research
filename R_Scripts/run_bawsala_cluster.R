@@ -1,6 +1,12 @@
 # Version 3: Using full ARP for session I/II
 # Robert Kubinec 
 
+.libPaths("/home/rmk7/other_R_libs3")
+
+require(cmdstanr)
+
+set_cmdstan_path("/home/rmk7/cmdstan")
+
 require(idealstan)
 require(bayesplot)
 require(dplyr)
