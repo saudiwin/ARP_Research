@@ -13,7 +13,7 @@ require(xtable)
 
 # legislative data 
 # provided by Al-Bawsala
-all_votes <- readr::read_csv('data/parliament_observatory_al_bawsala/Votes_M01.csv')
+all_votes <- readr::read_csv('/scratch/rmk7/arp/Votes_M01.csv')
 
 all_votes <-  mutate(all_votes,mp_bloc_name=recode(mp_bloc_name,
                                                          `Afek Tounes et l'appel des tunisiens à l'étranger`="Afek Tounes",
@@ -58,12 +58,13 @@ estimate_all <- id_estimate(arp_ideal_data,
                             restrict_ind_high= "Nahda",
                             restrict_ind_low="Front Populaire",
                             model_type=4,
-                            vary_ideal_pts = 'AR1',
+                            vary_ideal_pts = 'AR1',nchains = 2,
+                            ncores = parallel::detectCores(),
                             fixtype='prefix',niters = 500,id_refresh=10)
 
 
 
-saveRDS(estimate_all,'data/estimate_all_ar1_full.rds')
+saveRDS(estimate_all,'/scratch/rmk7/arp/estimate_all_ar1_full.rds')
 
 id_plot_legis_dyn(estimate_all,person_plot=F,use_ci = F) +
   geom_vline(aes(xintercept=lubridate::ymd('2016-07-30')),
