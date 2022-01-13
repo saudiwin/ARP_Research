@@ -20,7 +20,7 @@ require(xtable)
 # legislative data 
 # provided by Al-Bawsala
 
-run_model <- F
+run_model <- T
 
 if(run_model) {
   
@@ -51,7 +51,9 @@ if(run_model) {
                                                     "Afek Tounes",
                                                     "Union Patriotique Libre",
                                                     "Bloc Démocrate",
-                                                    "Aucun bloc"))
+                                                    "Aucun bloc")) %>% 
+    mutate(mp_bloc_name=recode(mp_bloc_name,
+                               `Bloc Démocrate`="Social-Démocrate"))
   
   bill_stat <- all_votes %>% 
     group_by(bill_id) %>% 
@@ -89,16 +91,16 @@ if(run_model) {
                             group_id="mp_bloc_name",remove_cov_int = T,
                             person_cov=~change*mp_bloc_name)
   
-  arp_ideal_data@person_cov <- c(arp_ideal_data@person_cov[1],arp_ideal_data@person_cov[9:15])
+  arp_ideal_data@person_cov <- c(arp_ideal_data@person_cov[1],arp_ideal_data@person_cov[8:13])
   arp_ideal_data@score_matrix <- select(arp_ideal_data@score_matrix,item_id:change,
                                         `change:mp_bloc_nameAucun bloc`:discrete)
   
   
   estimate_all <- id_estimate(arp_ideal_data,
                               use_groups = T,
-                              restrict_ind_high="3339",
-                              restrict_ind_low="0759",
-                              const_type="items",
+                              restrict_ind_high="0250",
+                              restrict_ind_low="3959",
+                              const_type="items",time_var=10,
                               #restrict_ind_high= "Nahda",
                               #restrict_ind_low="Front Populaire",
                               model_type=4,save_files="/scratch/rmk7/arp/junk/",
