@@ -21,6 +21,7 @@ run_model <- T
 
 if(run_model) {
   
+<<<<<<< HEAD
   all_votes <- readr::read_csv('data/parliament_observatory_al_bawsala/Votes_M01.csv')
   
   all_votes <-  mutate(all_votes,mp_bloc_name=recode(mp_bloc_name,
@@ -74,7 +75,11 @@ if(run_model) {
     mutate(vote_diff=sqrt((n.x - n.y)^2))
   bill_stat_no <- filter(bill_stat, vote_choice=="NO") %>% 
     mutate(vote_diff=sqrt((n.x - n.y)^2))
+=======
+  # use script create_data.R to create the rds file
+>>>>>>> 7b61294baf3756b39467fc4747db62e20424c06f
   
+  all_votes <- readRDS("data/all_votes.rds")
   
   # no vote: approving budget for the IVD
   # NT split with Nahda, voted with Horra & FP in favor of law
@@ -103,18 +108,25 @@ if(run_model) {
                             person_id="mp_id",
                             item_id="vote_id",
                             time_id="vote_date",
-                            group_id="mp_bloc_name",remove_cov_int = T,
+                            group_id="mp_bloc_name",remove_cov_int = F,
                             person_cov=~change*mp_bloc_name)
   
+<<<<<<< HEAD
   arp_ideal_data@person_cov <- c(arp_ideal_data@person_cov[1],arp_ideal_data@person_cov[10:15])
   arp_ideal_data@score_matrix <- select(arp_ideal_data@score_matrix,item_id:change,
                                         `change:mp_bloc_nameAucun bloc`:discrete)
+=======
+  # arp_ideal_data@person_cov <- c(arp_ideal_data@person_cov[1],arp_ideal_data@person_cov[10:17])
+  # arp_ideal_data@score_matrix <- select(arp_ideal_data@score_matrix,item_id:change,
+  #                                       `change:mp_bloc_nameAucun bloc`:discrete)
+>>>>>>> 7b61294baf3756b39467fc4747db62e20424c06f
   
   
   estimate_all <- id_estimate(arp_ideal_data,
-                              use_groups = T,
+                              use_groups = F,
                               restrict_ind_high="5aeae5b84f24d02328a2f1aa",
                               restrict_ind_low="58528919cf44121f3e63aee5",
+<<<<<<< HEAD
                               #restrict_ind_high="57a31e71cf44122088ceed2c",
                               #restrict_ind_low="57a31e71cf44122088ceed31",
                               const_type="items",time_var=12000,
@@ -125,10 +137,20 @@ if(run_model) {
                               ncores = parallel::detectCores(),
                               fixtype='prefix',niters = 250,
                               warmup=250,id_refresh=10)
+=======
+                              const_type="items",time_var=100,restrict_var = F,
+                              niters=250,warmup=250,time_fix_sd = .01,
+                              #restrict_ind_high= "Nahda",
+                              #restrict_ind_low="Front Populaire",
+                              model_type=4,save_files="/scratch/rmk7/arp/junk/",
+                              vary_ideal_pts = 'random_walk',nchains = 1,
+                              ncores = parallel::detectCores(),max_treedepth=10,
+                              fixtype='prefix',id_refresh=10)
+>>>>>>> 7b61294baf3756b39467fc4747db62e20424c06f
   
   
   
-  saveRDS(estimate_all,'/scratch/rmk7/arp/estimate_all_ar1_full.rds')
+  saveRDS(estimate_all,'/scratch/rmk7/arp/estimate_all_ar3_full_rv.rds')
   
 } else {
   
@@ -187,29 +209,83 @@ if(run_model) {
   
   print(nrow(all_votes))
   
-  estimate_all <- readRDS("data/estimate_all_ar1_full.rds")
-  
-  id_plot_legis_dyn(estimate_all,person_plot=F,use_ci = F) +
+  estimate_all1 <- readRDS("data/estimate_all_ar1_full_rv.rds")
+  estimate_all2 <- readRDS("data/estimate_all_ar2_full_rv.rds")
+  estimate_all3 <- readRDS("data/estimate_all_ar3_full_rv.rds")
+  p2 <- id_plot_legis_dyn(estimate_all2,person_plot=F,use_ci = F) +
     geom_vline(aes(xintercept=lubridate::ymd('2016-07-30')),
-               linetype=2) +
+               linetype=2)
+  p1 <- id_plot_legis_dyn(estimate_all1,person_plot=F,use_ci = F) +
+    geom_vline(aes(xintercept=lubridate::ymd('2016-07-30')),
+               linetype=2)
+  p3 <- id_plot_legis_dyn(estimate_all3,person_plot=F,use_ci = F) +
+    geom_vline(aes(xintercept=lubridate::ymd('2016-07-30')),
+               linetype=2)
     # scale_y_continuous(labels=c('More\nSecular','-1.0','-0.5','0.0','0.5','More\nIslamist'),
     #                    breaks=c(-1.5,-1.0,-0.5,0.0,0.5,1.0)) +
-    facet_wrap(~group_id,scales='free_y')
+    #facet_wrap(~group_id,scales='free_y')
   
-  ggsave('party_over_time.png')
+  library(patchwork)
   
-  id_plot_cov(estimate_all)
-  id_plot_cov(estimate_all,filter_cov = c('change:blocHorra','change'))
-  id_plot_legis_var(estimate_all)
+  p1 + p2 + p3 & theme(text=element_text(family=""))
+  
+  ggsave('party_over_time.png',width=12,height=6)
+  
+  require(bayesplot)
+  
+  library("ggplot2")
+  library("hrbrthemes")
+  #> NOTE: Either Arial Narrow or Roboto Condensed fonts are required to use these themes.
+  #>       Please use hrbrthemes::import_roboto_condensed() to install Roboto Condensed and
+  #>       if Arial Narrow is not on your system, please see https://bit.ly/arialnarrow
+  
+  
+  options(hrbrthemes.loadfonts = TRUE)
+  require(posterior)
+  require(tidybayes)
+  require(tidyverse)
+  
+  get_covs <- bind_draws(estimate_all1@stan_samples$draws("legis_x"),
+                         estimate_all2@stan_samples$draws("legis_x"),
+                         estimate_all3@stan_samples$draws("legis_x"),
+                         along="chain")
+  
+  get_covs <- as_draws_df(get_covs) %>% 
+    gather(key="variable",value="estimate",matches('legis')) %>% 
+    mutate(variable=factor(variable,levels=c("legis_x[1]",
+                                             "legis_x[2]",
+                                             "legis_x[3]",
+                                             "legis_x[4]",
+                                             "legis_x[5]",
+                                             "legis_x[6]",
+                                             "legis_x[7]",
+                                             "legis_x[8]",
+                                             "legis_x[9]",
+                                             "legis_x[10]",
+                                             "legis_x[11]",
+                                             "legis_x[12]",
+                                             "legis_x[13]"),
+                           labels=estimate_all1@score_data@person_cov))
+  
+  get_covs %>% 
+    ggplot(aes(x=estimate, y=variable)) +
+    stat_halfeye() + geom_vline(xintercept=0) +
+    ggtitle("Effect of Carthage on Party-Level Ideal Points")
+  
+  ggsave("cov_effect.png")
+  
+  # id_plot_cov(estimate_all)
+  # id_plot_cov(estimate_all,filter_cov = c('change:blocHorra','change'))
+  id_plot_legis_var(estimate_all2)
   
   # pull out bill discrimination parameters 
   
-  all_params <- summary(estimate_all)
-  just_discrim <- filter(all_params,grepl(pattern = 'sigma_reg_free',x=parameters)) %>% 
-    mutate(abs_score=abs(posterior_median),
-           index=as.numeric(str_extract(parameters,'[0-9]+'))) %>% 
+  all_params <- summary(estimate_all2)
+  just_discrim <- filter(all_params,grepl(pattern = 'sigma_reg_free',x=`Parameter Name`)) %>% 
+    mutate(abs_score=abs(`Posterior Median`),
+           index=as.numeric(str_extract(`Parameter Name`,'[0-9]+'))) %>% 
     arrange(desc(abs_score))
-  group_ids <- select(estimate_all@score_data@score_matrix,item_id) %>% 
+  group_ids <- select(estimate_all2@score_data@score_matrix,item_id) %>% 
     mutate(index=as.numeric(item_id)) %>% 
     distinct
   
@@ -217,8 +293,7 @@ if(run_model) {
   
   all_out <- xtable(select(just_discrim,
                            Vote='item_id',
-                           `Discrimination Score`="posterior_median",
-                           `Standard Deviation (Error)`="posterior_sd"))
+                           `Discrimination Score`="Posterior Median"))
   print(all_out,type='latex',file='discrim_bill.tex')
   
   
