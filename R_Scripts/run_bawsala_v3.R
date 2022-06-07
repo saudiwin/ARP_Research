@@ -1,12 +1,9 @@
 # Version 3: Using full ARP for session I/II
 # Robert Kubinec 
 
-.libPaths("/home/rmk7/other_R_libs3")
+
 
 require(cmdstanr)
-
-set_cmdstan_path("/home/rmk7/cmdstan")
-
 require(idealstan)
 require(bayesplot)
 require(dplyr)
@@ -24,7 +21,7 @@ run_model <- T
 
 if(run_model) {
   
-  all_votes <- readr::read_csv('/scratch/rmk7/arp/Votes_M01.csv')
+  all_votes <- readr::read_csv('data/parliament_observatory_al_bawsala/Votes_M01.csv')
   
   all_votes <-  mutate(all_votes,mp_bloc_name=recode(mp_bloc_name,
                                                      `Afek Tounes et l'appel des tunisiens à l'étranger`="Afek Tounes",
@@ -55,7 +52,8 @@ if(run_model) {
                                                     "Bloc Démocrate",
                                                     "Aucun bloc")) %>% 
     mutate(mp_bloc_name=recode(mp_bloc_name,
-                               `Bloc Démocrate`="Social-Démocrate"))
+                               `Bloc Démocrate`="Social-Démocrate",
+                               `Tahya Tounes`="Nidaa Tounes"))
   
   bill_stat <- all_votes %>% 
     group_by(vote_id) %>% 
@@ -96,6 +94,10 @@ if(run_model) {
   
   print(nrow(all_votes))
   
+  all_votes_small <- filter(all_votes, 
+                            vote_date < ymd("2017-01-01"),
+                            vote_date > ymd("2016-01-01"))
+  
   arp_ideal_data <- id_make(score_data = all_votes,
                             outcome_disc="vote_choice",
                             person_id="mp_id",
@@ -104,7 +106,7 @@ if(run_model) {
                             group_id="mp_bloc_name",remove_cov_int = T,
                             person_cov=~change*mp_bloc_name)
   
-  arp_ideal_data@person_cov <- c(arp_ideal_data@person_cov[1],arp_ideal_data@person_cov[8:13])
+  arp_ideal_data@person_cov <- c(arp_ideal_data@person_cov[1],arp_ideal_data@person_cov[10:15])
   arp_ideal_data@score_matrix <- select(arp_ideal_data@score_matrix,item_id:change,
                                         `change:mp_bloc_nameAucun bloc`:discrete)
   
@@ -113,13 +115,16 @@ if(run_model) {
                               use_groups = T,
                               restrict_ind_high="5aeae5b84f24d02328a2f1aa",
                               restrict_ind_low="58528919cf44121f3e63aee5",
-                              const_type="items",time_var=10,
+                              #restrict_ind_high="57a31e71cf44122088ceed2c",
+                              #restrict_ind_low="57a31e71cf44122088ceed31",
+                              const_type="items",time_var=12000,
                               #restrict_ind_high= "Nahda",
                               #restrict_ind_low="Front Populaire",
-                              model_type=4,save_files="/scratch/rmk7/arp/junk/",
-                              vary_ideal_pts = 'random_walk',nchains = 3,
+                              model_type=3,
+                              vary_ideal_pts = 'random_walk',nchains = 2,
                               ncores = parallel::detectCores(),
-                              fixtype='prefix',niters = 500,id_refresh=10)
+                              fixtype='prefix',niters = 250,
+                              warmup=250,id_refresh=10)
   
   
   
