@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH	--ntasks=1
-#SBATCH --cpus-per-task=55
+#SBATCH --cpus-per-task=128
 #SBATCH --time=72:00:00
-#SBATCH -o /home/rmk7/fbclimate/job.inference2.out
-#SBATCH -e /home/rmk7/fbclimate/job.inference2.err
+#SBATCH -o /home/rmk7/ARP_Research/job.ideal1.out
+#SBATCH -e /home/rmk7/ARP_Research/job.ideal1.err
 
 module purge
 
