@@ -79,6 +79,19 @@ if(run_model) {
   
   all_votes <- readRDS("data/all_votes.rds")
   
+  check_bills1 <- group_by(all_votes,
+                           vote_id,mp_bloc_name,vote_choice,change,vote_date) %>% count %>% 
+    filter(!is.na(vote_choice)) %>% 
+    group_by(change,vote_id,vote_date) %>% 
+    summarize(diff=mean(sqrt((n[mp_bloc_name=="Front Populaire" & vote_choice=="YES"] - n[mp_bloc_name=="Nahda" & vote_choice=="YES"])^2)),
+              R_vote=n[mp_bloc_name=="Nahda" & vote_choice=="YES"],
+              D_vote=n[mp_bloc_name=="Front Populaire" & vote_choice=="YES"],
+              polarity = sign(R_vote - D_vote)) %>% 
+    ungroup %>% 
+    group_by(change,polarity) %>% 
+    filter(diff > quantile(diff, .85)) %>% 
+    arrange(vote_date)
+  
   # no vote: approving budget for the IVD
   # NT split with Nahda, voted with Horra & FP in favor of law
   # Report de l'examen du budget de l'instance vérité et dignité
@@ -119,8 +132,8 @@ if(run_model) {
   
   estimate_all <- id_estimate(arp_ideal_data,
                               use_groups = F,
-                              restrict_ind_high="5aeae5b84f24d02328a2f1aa",
-                              restrict_ind_low="58528919cf44121f3e63aee5",
+                              restrict_ind_high=c("5d42e9b04f24d01b78a3817c","57a1b247cf4412208bceed66"),
+                              restrict_ind_low=c("5c9cf4aa4f24d0572feb077c","57a31e71cf44122088ceed2c"),
                               #restrict_ind_high="57a31e71cf44122088ceed2c",
                               #restrict_ind_low="57a31e71cf44122088ceed31",
                               const_type="items",
