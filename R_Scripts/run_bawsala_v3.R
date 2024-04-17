@@ -132,8 +132,11 @@ if(run_model) {
   
   estimate_all <- id_estimate(arp_ideal_data,
                               use_groups = F,
-                              restrict_ind_high=c("5d42e9b04f24d01b78a3817c","57a1b247cf4412208bceed66"),
-                              restrict_ind_low=c("5c9cf4aa4f24d0572feb077c","57a31e71cf44122088ceed2c"),
+                              restrict_ind_high=c("5d42e9b04f24d01b78a3817c",
+                              "57a1b247cf4412208bceed66","	
+585281c5cf44121f3e63aee2"),
+                              restrict_ind_low=c("5c9cf4aa4f24d0572feb077c","57a31e71cf44122088ceed2c",
+                                                 "5866afa7cf44121f3e63b001"),
                               #restrict_ind_high="57a31e71cf44122088ceed2c",
                               #restrict_ind_low="57a31e71cf44122088ceed31",
                               const_type="items",
