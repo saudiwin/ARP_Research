@@ -141,11 +141,11 @@ if(run_model) {
                               #restrict_ind_low="Front Populaire",
                               model_type=3,map_over_id = "persons",
                               vary_ideal_pts = 'splines',
-                              spline_degree=3,
+                              spline_degree=3,adapt_delta=0.95,
                               nchains = 2,
                               ncores = parallel::detectCores(),
-                              fixtype='prefix',niters = 250,
-                              warmup=250,id_refresh=10)
+                              fixtype='prefix',niters = 500,
+                              warmup=500,id_refresh=10)
    
   
   
