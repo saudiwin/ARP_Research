@@ -146,7 +146,7 @@ if(run_model) {
                               model_type=3,map_over_id = "persons",
                               vary_ideal_pts = 'splines',
                               spline_degree=3,adapt_delta=0.95,
-                              nchains = 2,
+                              nchains = 4,
                               ncores = parallel::detectCores(),
                               fixtype='prefix',niters = 500,
                               warmup=500,id_refresh=10)
