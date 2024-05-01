@@ -80,13 +80,13 @@ require(xtable)
                            vote_id,mp_bloc_name,vote_choice,change,vote_date) %>% count %>% 
     filter(!is.na(vote_choice)) %>% 
     group_by(change,vote_id,vote_date) %>% 
-    summarize(diff=mean(sqrt((n[mp_bloc_name=="Front Populaire" & vote_choice=="YES"] - n[mp_bloc_name=="Nahda" & vote_choice=="YES"])^2)),
+    summarize(diff=mean(sqrt((n[mp_bloc_name=="Front Populaire" & vote_choice=="NO"] + n[mp_bloc_name=="Nahda" & vote_choice=="YES"])^2),na.rm=T),
               R_vote=n[mp_bloc_name=="Nahda" & vote_choice=="YES"],
               D_vote=n[mp_bloc_name=="Front Populaire" & vote_choice=="YES"],
               polarity = sign(R_vote - D_vote)) %>% 
     ungroup %>% 
     group_by(change,polarity) %>% 
-    filter(diff > quantile(diff, .85)) %>% 
+    filter(diff > quantile(diff, .85,na.rm=T)) %>% 
     arrange(vote_date)
   
   # no vote: approving budget for the IVD
@@ -129,8 +129,8 @@ require(xtable)
   
   estimate_all <- id_estimate(arp_ideal_data,
                               use_groups = F,
-                              restrict_ind_high=c("554ced8712bdaa5df2537688","5d42e9b04f24d01b78a3817c",
-                              "57a1b247cf4412208bceed66","585281c5cf44121f3e63aee2"),
+                              restrict_ind_high=c("554ced8712bdaa5df2537688","569416d212bdaa5ee3796068",
+                              "59b287314f24d0311313bfff","5ba234a14f24d03ba3d842a2"),
                               restrict_ind_low=c("5603199812bdaa20aa5b4907",
                                                  "5c9cf4aa4f24d0572feb077c","57a31e71cf44122088ceed2c",
                                                  "5866afa7cf44121f3e63b001"),
