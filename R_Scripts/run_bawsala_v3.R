@@ -74,7 +74,8 @@ require(xtable)
   # use script create_data.R to create the rds file
   
   all_votes <- readRDS("data/all_votes.rds") %>% 
-    mutate(vote_choice=na_if(vote_choice, "ABSTAIN"))
+    mutate(vote_choice=na_if(vote_choice, "ABSTAIN"),
+           mp_bloc_name=fct_relevel(factor(mp_bloc_name),"Nahda"))
   
   check_bills1 <- group_by(all_votes,
                            vote_id,mp_bloc_name,vote_choice,change,vote_date) %>% count %>% 
@@ -142,7 +143,7 @@ require(xtable)
                               #restrict_ind_low="Front Populaire",
                               model_type=2,map_over_id = "persons",
                               vary_ideal_pts = 'splines',
-                              spline_degree=3,adapt_delta=0.95,
+                              spline_degree=2,adapt_delta=0.95,
                               nchains = 4,
                               ncores = parallel::detectCores(),
                               fixtype='prefix',niters = 500,
