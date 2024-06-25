@@ -14,6 +14,8 @@ require(stringr)
 require(forcats)
 require(xtable)
 
+model_type <- 1
+
 # legislative data 
 # provided by Al-Bawsala
 
@@ -151,6 +153,6 @@ require(xtable)
    
   
   
-  saveRDS(estimate_all,'/scratch/rmk7/arp/estimate_all_ar3_full_rv.rds')
+  saveRDS(estimate_all,paste0('/scratch/rmk7/arp/estimate_all_ar3_full_rv',model_type,'.rds'))
   
 
