@@ -139,8 +139,7 @@ model_type <- 1
                                                  "5866afa7cf44121f3e63b001"),
                               #restrict_ind_high="57a31e71cf44122088ceed2c",
                               #restrict_ind_low="57a31e71cf44122088ceed31",
-                              const_type="items",restrict_sd_high = .001,
-                              restrict_sd_low = .001,
+                              const_type="items",
                               #restrict_ind_high= "Nahda",
                               #restrict_ind_low="Front Populaire",
                               model_type=2,map_over_id = "persons",
@@ -153,6 +152,6 @@ model_type <- 1
    
   
   
-  saveRDS(estimate_all,paste0('/scratch/rmk7/arp/estimate_all_ar3_full_rv',model_type,'.rds'))
+  saveRDS(estimate_all,paste0('/lustre/scratch/rkubinec/arp/estimate_all_ar3_full_rv',model_type,'.rds'))
   
 
