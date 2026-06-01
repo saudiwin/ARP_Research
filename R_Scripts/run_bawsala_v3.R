@@ -14,6 +14,8 @@ require(stringr)
 require(forcats)
 require(xtable)
 
+set_cmdstan_path("/scratch/user/u.rk234736/cmdstan-2.39.0")
+
 model_type <- 1
 
 # legislative data 
