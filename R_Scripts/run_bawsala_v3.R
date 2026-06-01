@@ -145,13 +145,13 @@ model_type <- 1
                               model_type=2,map_over_id = "persons",
                               vary_ideal_pts = 'splines',
                               spline_degree=2,adapt_delta=0.95,
-                              nchains = 1,
+                              nchains = 4,
                               ncores = parallel::detectCores(),
                               fixtype='prefix',niters = 500,
                               warmup=500,id_refresh=10)
    
   
   
-  saveRDS(estimate_all,paste0('/lustre/scratch/rkubinec/arp/estimate_all_ar3_full_rv',model_type,'.rds'))
+  saveRDS(estimate_all,paste0('from_cluster/estimate_all_ar3_full_rv',model_type,'.rds'))
   
 
