@@ -83,9 +83,9 @@ model_type <- 1
                            vote_id,mp_bloc_name,vote_choice,change,vote_date) %>% count %>% 
     filter(!is.na(vote_choice)) %>% 
     group_by(change,vote_id,vote_date) %>% 
-    summarize(diff=mean(sqrt((n[mp_bloc_name=="Front Populaire" & vote_choice=="NO"] + n[mp_bloc_name=="Nahda" & vote_choice=="YES"])^2),na.rm=T),
-              R_vote=n[mp_bloc_name=="Nahda" & vote_choice=="YES"],
-              D_vote=n[mp_bloc_name=="Front Populaire" & vote_choice=="YES"],
+    summarize(diff=mean(sqrt((sum(n[mp_bloc_name=="Front Populaire" & vote_choice=="NO"]) + sum(n[mp_bloc_name=="Nahda" & vote_choice=="YES"]))^2),na.rm=T),
+              R_vote=sum(n[mp_bloc_name=="Nahda" & vote_choice=="YES"]),
+              D_vote=sum(n[mp_bloc_name=="Front Populaire" & vote_choice=="YES"]),
               polarity = sign(R_vote - D_vote)) %>% 
     ungroup %>% 
     group_by(change,polarity) %>% 
@@ -145,7 +145,7 @@ model_type <- 1
                               model_type=2,map_over_id = "persons",
                               vary_ideal_pts = 'splines',
                               spline_degree=2,adapt_delta=0.95,
-                              nchains = 4,
+                              nchains = 1,
                               ncores = parallel::detectCores(),
                               fixtype='prefix',niters = 500,
                               warmup=500,id_refresh=10)
