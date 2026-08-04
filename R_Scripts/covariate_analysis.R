@@ -8,20 +8,28 @@ library(posterior)
 
 arp_est <- readRDS("from_cluster/estimate_all_ar3_full_rv1.rds")
 
+# make some distributions
+
+id_plot_legis_dyn(arp_est) + facet_wrap(~group_id)
+
+# whether or not to re-run marginal effect estimation
+
+run_margins <- F
+
 # map covariate effects
 
 cov_estimates <- summarize_draws(arp_est@stan_samples$draws("legis_x")) %>% 
   mutate(cov_names=arp_est@score_data@person_cov,
          cov_names=fct_recode(cov_names,
-           "Nahda Post-Carthage" = "change",
-           "Carthage X Independent" = "change:mp_bloc_nameAucun bloc",
-           "Carthage X Front Populaire" = "change:mp_bloc_nameFront Populaire",
-           "Carthage X Horra" = "change:mp_bloc_nameHorra",
-           "Carthage X Afek Tounes" = "change:mp_bloc_nameAfek Tounes",
-           "Carthage X Nidaa Tounes" = "change:mp_bloc_nameNidaa Tounes",
+           "Nahda Post-Carthage" = "person_change",
+           "Carthage X Independent" = "person_change:mp_bloc_nameAucun bloc",
+           "Carthage X Front Populaire" = "person_change:mp_bloc_nameFront Populaire",
+           "Carthage X Horra" = "person_change:mp_bloc_nameHorra",
+           "Carthage X Afek Tounes" = "person_change:mp_bloc_nameAfek Tounes",
+           "Carthage X Nidaa Tounes" = "person_change:mp_bloc_nameNidaa Tounes",
            "Carthage X Social Democrate" = "mp_bloc_nameSocial-Démocrate",
-           "Carthage X Tahya Tounes" = "change:mp_bloc_nameTahya Tounes",
-           "Carthage X UPL" = "change:mp_bloc_nameUnion Patriotique Libre",
+           "Carthage X Tahya Tounes" = "person_change:mp_bloc_nameTahya Tounes",
+           "Carthage X UPL" = "person_change:mp_bloc_nameUnion Patriotique Libre",
            "Independent" = "mp_bloc_nameAucun bloc",
            "Front Populaire" = "mp_bloc_nameFront Populaire",
            "Horra" = "mp_bloc_nameHorra",
@@ -72,7 +80,9 @@ all_votes <- readRDS("data/all_votes.rds") %>%
   mutate(vote_choice=na_if(vote_choice, "ABSTAIN"),
          mp_bloc_name=fct_relevel(factor(mp_bloc_name),"Nahda"))
 
-eps <- 1e-4
+if(run_margins) {
+
+  eps <- 1e-4
 
 new_data1 <- mutate(all_votes, change=1 - change) 
 
@@ -91,7 +101,8 @@ arp_est_pred1 <- id_post_pred(arp_est,newdata=new_data1,
                                type="epred",
                                draws=draws)
 arp_est_pred2 <- id_post_pred(arp_est,newdata=new_data2,
-                               use_cores=floor(parallel::detectCores()/2),
+                                use_cores=2,
+                               #use_cores=floor(parallel::detectCores()/2),
                                type="epred",
                                draws=draws)
 
@@ -125,8 +136,8 @@ c2 <- lapply(c1, function(mat) {
            estimate=as.numeric(estimate))
   
 }) %>% bind_rows
-
-to_merge <- mutate(arp_est@score_data@score_matrix, 
+  
+  to_merge <- mutate(arp_est@score_data@score_matrix, 
                    item_orig=item_id,
                    time_id=time_id,
                    person_orig=person_id,
@@ -137,6 +148,14 @@ to_merge <- mutate(arp_est@score_data@score_matrix,
 
 c2 <- left_join(c2, to_merge, 
                 by=c("item_id","person_id"))
+
+saveRDS(c2,"data/c2.rds")
+
+}
+
+
+c2 <- readRDS("data/c2.rds")
+
 
 # get effect separately by democrats/republicans
 
@@ -160,13 +179,14 @@ saveRDS(by_party,"data/by_party.rds")
 
 # need to only examine marginal effects post-Carthage
 
-check_date <- filter(arp_est@score_data@score_matrix, change==1) %>% 
+check_date <- filter(arp_est@score_data@score_matrix, person_change==1) %>% 
   summarize(post_carthage=min(time_id))
 
 by_party %>% 
   ungroup %>% 
   filter(time_id >= check_date$post_carthage) %>% 
-  mutate(group_id=case_match(group_id,
+  mutate(group_id=factor(group_id, labels=levels(all_votes$mp_bloc_name)),
+              group_id=case_match(group_id,
                              "Nahda"~"Baseline: Nahda",
                              .default= group_id),
          group_id=fct_relevel(group_id, "Baseline: Nahda")) %>% 

@@ -13,14 +13,14 @@ require(textclean)
 
 # need to load and edit first session
 
-sess1 <- readxl::read_excel('bawsala/inst/extdata/ANC_votes.xlsx') %>% 
+sess1 <- readr::read_csv('data/ANC_votes.csv') %>% 
   gather(key = id,value=outcome,-legis.names,-bloc) %>% 
   mutate(id=as.numeric(id),
          outcome=ifelse(is.na(outcome),'absent',outcome),
          outcome=factor(outcome,levels=c('contre','abstenu','pour','absent')))
 
 sess1_billnames <- readxl::read_excel('data/ANC_votes_labels-HM-edits.xlsx') %>% 
-  select(-X__1)
+  select(-`...2`)
 
 
 sessc <- left_join(sess1,sess1_billnames) %>% 
@@ -37,17 +37,29 @@ day(sessc$law_date) <- 10
 
 # load ARP data
 
-group_id <- readr::read_csv('data/clean_votes_groups.csv')
-day(group_id$law_date) <- 10
+  all_votes <- readRDS("data/all_votes.rds") %>% 
+    mutate(vote_choice=na_if(vote_choice, "ABSTAIN"),
+           mp_bloc_name=fct_relevel(factor(mp_bloc_name),"Nahda")) |> 
+    rename(legis_names="mp_id",law_unique="vote_id",law_date="vote_date",
+      clean_votes="vote_choice",bloc="mp_bloc_name") |> 
+        mutate(clean_votes=as.numeric(clean_votes))
+day(all_votes$law_date) <- 10
 
 # combine sessions
 
-group_id <- bind_rows(group_id,sessc) %>% 
-  mutate(bloc=fct_collapse(bloc,
+group_id <- bind_rows(all_votes,sessc) %>% 
+  mutate(faction=fct_collapse(bloc,
                            Islamists=c("Mouvement Nahdha",
-                                       "Mouvement Ennahdha"),
+                                       "Mouvement Ennahdha",
+                                      "Nahda"),
                            Secularists=c("Afek Tounes et l'appel des tunisiens l'tranger",
                                          "AllA(C)geance A la Patrie",
+                                         "Alliance D\xe9mocratique",
+                                         "Afek Tounes",
+                                         "Horra",
+                                         "Tahya Tounes",
+                                         "Social-Démocrate",
+                                         "Nidaa Tounes",
                                          "Aucun bloc",
                                          "Bloc Al Horra du Mouvement Machrouu Tounes",
                                          "Bloc D\xe9mocrates",
@@ -62,38 +74,49 @@ group_id <- bind_rows(group_id,sessc) %>%
                                          "Independent",
                                          "Mouvement Nidaa Tounes",
                                          "Union Patriotique Libre",
-                                         "Transition D\xe9mocratique")))
+                                         "Transition D\xe9mocratique")),
+                                        clean_votes=na_if(clean_votes, clean_votes %in% c(2,4)),
+                                      clean_votes=ifelse(clean_votes==1, 0, ifelse(clean_votes==3, 1,NA)))
 
 # Need a covariate for beginning of ARP
 
 group_id <- group_by(group_id,bloc) %>% 
   mutate(change=as.numeric(law_date>lubridate::mdy('12-2-2014')))
 
-group_id$clean_votes <- factor(group_id$clean_votes)
+# strip out underscores from MP names
+
+group_id <- mutate(group_id, legis_names=str_replace_all(legis_names, "_", " "))
+
+#group_id$clean_votes <- factor(group_id$clean_votes)
 
 arp_ideal_data <- id_make(score_data = group_id,
-                          outcome="clean_votes",
+                          outcome_disc="clean_votes",
                           person_id="legis_names",
                           item_id="law_unique",
                           time_id="law_date",
-                          group_id="bloc",
-                          group_cov = ~change*bloc,
-                          miss_val="4")
+                          person_cov = ~change*bloc)
 
-estimate_all <- id_estimate(arp_ideal_data,use_vb = T,
-                            use_groups = T,
-                            restrict_ind_high="Islamists",
-                            restrict_ind_low = "Secularists",
-                            model_type=4,
-                            vary_ideal_pts = 'AR1',
-                            time_sd=.25,
-                            fixtype='vb_partial',
-                            tol_rel_obj=0.0001)
+estimate_all <- id_estimate(arp_ideal_data,
+                            restrict_ind_high=c("554ced8712bdaa5df2537688","569416d212bdaa5ee3796068",
+                              "59b287314f24d0311313bfff","5ba234a14f24d03ba3d842a2"),
+                              restrict_ind_low=c("5603199812bdaa20aa5b4907",
+                                                 "5c9cf4aa4f24d0572feb077c","57a31e71cf44122088ceed2c",
+                                                 "5866afa7cf44121f3e63b001"),
+                              #restrict_ind_high="57a31e71cf44122088ceed2c",
+                              #restrict_ind_low="57a31e71cf44122088ceed31",
+                              const_type="items",
+                            model_type=2,
+                            vary_ideal_pts = 'splines',
+                            spline_degree=2,
+                              nchains = 4,
+                              ncores = parallel::detectCores(),
+                              fixtype='prefix',niters = 500,
+                              warmup=500,id_refresh=10)
 
 saveRDS(estimate_all,'data/estimate_all_2groups_ar_vb.rds')
 
 id_plot_legis_dyn(estimate_all,
-                  group_color=F,person_plot=F,text_size_label=8) +
+                  group_color=F,person_plot=F,text_size_label=8,use_ci = F) +
   geom_vline(aes(xintercept=lubridate::ymd('2016-07-30')),
              linetype=2) +
   geom_vline(aes(xintercept=lubridate::ymd('2014-10-26')),
@@ -121,7 +144,7 @@ estimate_all_rw <- id_estimate(arp_ideal_data,use_vb = T,
                             restrict_ind_high="Islamists",
                             restrict_ind_low = "Secularists",
                             model_type=4,
-                            vary_ideal_pts = 'random_walk',
+                            vary_ideal_pts = 'spline',
                             time_sd=.2,
                             fixtype='vb_partial',
                             tol_rel_obj=0.0001)
