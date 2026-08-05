@@ -1,5 +1,9 @@
 # let's see how this thing does running all of our data!
 
+library(cmdstanr)
+
+set_cmdstan_path("/scratch/user/u.rk234736/cmdstan-2.39.0")
+
 require(idealstan)
 require(bayesplot)
 require(dplyr)
