@@ -114,7 +114,7 @@ estimate_all <- id_estimate(arp_ideal_data,
                             spline_degree=2,spline_knots = c(min(unique(arp_ideal_data@score_matrix$time_id)),
                                                               lubridate::mdy('12-2-2014'),
                                                             max(unique(arp_ideal_data@score_matrix$time_id))),
-                              nchains = 4,
+                              nchains = 4,max_treedepth=11,
                               ncores = parallel::detectCores(),
                               fixtype='prefix',niters = 500,
                               warmup=500,id_refresh=10)
