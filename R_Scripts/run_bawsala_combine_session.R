@@ -91,6 +91,19 @@ group_id <- group_by(group_id,bloc) %>%
 
 group_id <- mutate(group_id, legis_names=str_replace_all(legis_names, "_", " "))
 
+name_recode <- c(
+  "Badreddine Abdelkefi" = "Badreddine Abdelkafi",
+  "Meherzia Labidi"      = "Meherzia Laabidi",
+  "Khmais Ksila"         = "Khemais Ksila",
+  "Monia Ibrahim"        = "Monia Brahim",
+  "Iyed Dahmani"         = "Iyad Dahmani",
+  "Oussama Al Sghaier"   = "Oussama Al Saghir",
+  "Bechir Lazzem"        = "Bechir Ellazzem",
+  "Walid Bennani"        = "Walid Banneni"
+)
+
+group_id <- mutate(group_id, legis_names=recode(legis_names, !!!name_recode))
+
 #group_id$clean_votes <- factor(group_id$clean_votes)
 
 arp_ideal_data <- id_make(score_data = group_id,
@@ -114,81 +127,11 @@ estimate_all <- id_estimate(arp_ideal_data,
                             spline_degree=2,spline_knots = c(min(unique(arp_ideal_data@score_matrix$time_id)),
                                                               lubridate::mdy('12-2-2014'),
                                                             max(unique(arp_ideal_data@score_matrix$time_id))),
-                              nchains = 4,max_treedepth=12,
+                              nchains = 4,max_treedepth=13,
                               ncores = parallel::detectCores(),
                               fixtype='prefix',niters = 500,
                               warmup=500,id_refresh=10)
 
 saveRDS(estimate_all,'data/estimate_all_2groups_ar_vb.rds')
 
-id_plot_legis_dyn(estimate_all,
-                  group_color=F,person_plot=F,text_size_label=8,use_ci = F) +
-  geom_vline(aes(xintercept=lubridate::ymd('2016-07-30')),
-             linetype=2) +
-  geom_vline(aes(xintercept=lubridate::ymd('2014-10-26')),
-             linetype=3) +
-  annotate(geom='text',x=ymd('2016-07-30'),y=0.9,label=' Carthage Agreement') +
-  annotate(geom='text',x=ymd('2014-12-2'),y=0.65,label='New Parliament\nSession') +
-  scale_y_continuous(labels=c('More\nSecular','0.0','0.5','More\nIslamist'),
-                     breaks=c(-0.5,0.0,0.5,1.0)) +
-  scale_color_discrete(guide='none') + 
-  scale_x_date(date_breaks = '1 year',
-               date_labels='%Y')
-
-ggsave('party_over_time_2groups_1mo_ar.png')
-
-arp_ideal_data <- id_make(score_data = group_id,
-                          outcome="clean_votes",
-                          person_id="legis_names",
-                          item_id="law_unique",
-                          time_id="law_date",
-                          group_id="bloc",
-                          miss_val="4")
-
-estimate_all_rw <- id_estimate(arp_ideal_data,use_vb = T,
-                            use_groups = T,
-                            restrict_ind_high="Islamists",
-                            restrict_ind_low = "Secularists",
-                            model_type=4,
-                            vary_ideal_pts = 'spline',
-                            time_sd=.2,
-                            fixtype='vb_partial',
-                            tol_rel_obj=0.0001)
-
-saveRDS(estimate_all_rw,'data/estimate_all_2groups_rw_vb.rds')
-
-id_plot_legis_dyn(estimate_all_rw,
-                  group_color=F,person_plot=F,text_size_label=8) +
-  geom_vline(aes(xintercept=lubridate::ymd('2016-07-30')),
-             linetype=2) +
-  geom_vline(aes(xintercept=lubridate::ymd('2014-10-26')),
-             linetype=3) +
-  annotate(geom='text',x=ymd('2016-07-30'),y=0.9,label=' Carthage Agreement') +
-  annotate(geom='text',x=ymd('2014-12-2'),y=0.65,label='New Parliament\nSession') +
-  scale_y_continuous(labels=c('More\nSecular','0.0','0.5','More\nIslamist'),
-                     breaks=c(-0.5,0.0,0.5,1.0)) +
-  scale_color_discrete(guide='none') + 
-  scale_x_date(date_breaks = '1 year',
-               date_labels='%Y')
-
-ggsave('party_over_time_2groups_1mo_rw.png')
-
-# pull out bill discrimination parameters 
-
-all_params <- summary(estimate_all)
-just_discrim <- filter(all_params,grepl(pattern = 'sigma_reg_free',x=parameters)) %>% 
-  mutate(abs_score=abs(posterior_median),
-         index=as.numeric(str_extract(parameters,'[0-9]+'))) %>% 
-  arrange(desc(abs_score))
-group_ids <- select(estimate_all@score_data@score_matrix,item_id) %>% 
-  mutate(index=as.numeric(item_id)) %>% 
-  distinct
-
-just_discrim <- left_join(just_discrim,group_ids,'index')
-
-all_out <- xtable(select(just_discrim,
-                         Vote='item_id',
-                         `Discrimination Score`="posterior_median",
-                        `Standard Deviation (Error)`="posterior_sd"))
-print(all_out,type='latex',file='discrim_bill.tex')
 
