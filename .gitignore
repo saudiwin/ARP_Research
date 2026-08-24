@@ -15,3 +15,15 @@ sample_fit.rds
 To_Share
 To_Share.zip
 data/estimate_anc_arp_full.rds
+bloc_marginal_effects.jpg
+bloc_sankey.png
+combined_me.pdf
+cov_estimates.jpg
+cov_plot.png
+discrim_bill.tex
+party_over_time_2groups_1mo_ar.png
+party_over_time_arp.png
+post_carthage_marginal_eff.pdf
+Rplots.pdf
+data/estimate_all_2groups_ar_vb.rds
+data/estimate_all_ar3_full_rv1.rds
