@@ -5,12 +5,29 @@ library(ggplot2)
 library(idealstan)
 library(ggthemes)
 library(posterior)
+library(tinytable)
 
-arp_est <- readRDS("from_cluster/estimate_all_ar3_full_rv1.rds")
+arp_est <- readRDS("data/estimate_all_ar3_full_rv1.rds")
 
 # make some distributions
 
-id_plot_legis_dyn(arp_est) + facet_wrap(~group_id)
+id_plot_legis_dyn(arp_est,
+                  group_color=F,person_plot=F,text_size_label=8,use_ci = F,plot_text = F,
+                highlight="Ameur_Laraiedh") +
+  labs(y="",x="") +
+  geom_vline(aes(xintercept=lubridate::ymd('2016-07-30')),
+             linetype=2) +
+  geom_hline(yintercept = 0,linetype=3,color="red") +
+  annotate(geom='text',x=ymd('2017-01-30'),y=22,label='Carthage\nAgreement',size=3.5) +
+  # annotate(geom='text',x=ymd('2014-12-2'),y=-17,label='New\nParliament',size=3.5) +
+  annotate(geom='text',x=ymd('2017-12-30'),y=4,label='Ameur Laraiedh\n(Nahda Party)',size=3) +
+   scale_y_continuous(labels=c('Government','0.0','Opposition'),
+                      breaks=c(20,0.0,-20)) +
+  scale_color_discrete(guide='none') + 
+  scale_x_date(date_breaks = '1 year',
+               date_labels='%Y')
+
+ggsave('party_over_time_arp.png',width=6,height=4)
 
 # whether or not to re-run marginal effect estimation
 
@@ -60,6 +77,12 @@ cov_estimates %>%
   coord_flip()
 
 ggsave("cov_estimates.jpg",width=7,height=4)
+
+cov_estimates %>% 
+  select(`Covariate`="cov_names",`5% Low`="q5",`Point Estimate`="mean",`95% High`="q95") |> 
+  tt(caption="Effects of Carthage Agreement on Party-level Ideal Points\\label{tab:arp_effect}",digits=2,
+      notes=c("Table shows estimates of party-level changes in ideal points following the implementation of the Carthage Agreement. Positive scores indicate movement in a pro-government direction. Estimates represent empirical means and quantiles of the joint posterior distribution.")) |> 
+  save_tt("arp_cov.tex",overwrite=T)
 
 all_params <- summary(arp_est)
 just_discrim <- filter(all_params,grepl(pattern = 'sigma_reg_free',x=`Parameter Name`)) %>% 
@@ -151,12 +174,6 @@ c2 <- left_join(c2, to_merge,
 
 saveRDS(c2,"data/c2.rds")
 
-}
-
-
-c2 <- readRDS("data/c2.rds")
-
-
 # get effect separately by democrats/republicans
 
 by_party <- group_by(c2, draws, group_id, item_id, item_orig,time_id) %>% 
@@ -177,7 +194,9 @@ by_party <- left_join(by_party,
 
 saveRDS(by_party,"data/by_party.rds")
 
-# need to only examine marginal effects post-Carthage
+}
+
+by_party <- readRDS("data/by_party.rds")
 
 check_date <- filter(arp_est@score_data@score_matrix, person_change==1) %>% 
   summarize(post_carthage=min(time_id))
@@ -190,6 +209,7 @@ by_party %>%
                              "Nahda"~"Baseline: Nahda",
                              .default= group_id),
          group_id=fct_relevel(group_id, "Baseline: Nahda")) %>% 
+  filter(group_id != "Tahya Tounes") |> 
   ggplot(aes(y=mean_est,
              x=reorder(item_id,mean_est))) +
   geom_linerange(aes(ymin=low_est,
@@ -197,15 +217,13 @@ by_party %>%
                      colour=`median`)) +
   facet_wrap(~group_id) +
   ggthemes::theme_tufte() + 
-  scale_colour_viridis_c(name="Discrimination") +
+  scale_colour_viridis_c(name="Vote\nPolarization",labels=c("Pro\nOpposition","0","Pro\nGovernment"),breaks=c(-0.8, 0, 0.8)) +
   coord_flip() +
   labs(y="Marginal Change in Probability of Voting",
        x="Rollcalls") +
   geom_hline(yintercept=0,linetype=2,colour="black") +
   theme_tufte() +
   theme(axis.text.y=element_blank(),
-        axis.ticks.y=element_blank()) +
-  ggtitle("Change in Ideal Point Distributions Post-Carthage",
-          subtitle="Mediated by Vote Discrimination")
+        axis.ticks.y=element_blank(),legend.position = "top",legend.title.position = "top")
 
-ggsave("post_carthage_marginal_eff.pdf")
+ggsave("post_carthage_marginal_eff.pdf",width=6,height=4)

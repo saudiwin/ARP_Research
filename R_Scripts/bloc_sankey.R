@@ -55,7 +55,8 @@ name_recode <- c(
 
 group_id <- group_id %>%
   mutate(legis_names = recode(legis_names, !!!name_recode),
-         bloc = fix_encoding(bloc))
+         bloc = fix_encoding(bloc),
+        bloc=recode(bloc, `Aucun bloc`="Independent"))
 
 # for each MP, pull their ANC bloc, their bloc at the start of the ARP term,
 # and their bloc at the end of the ARP term (captures mid-term defections)
@@ -92,7 +93,7 @@ mp_stages <- full_join(anc_bloc, arp_start_bloc, by='legis_names') %>%
     stage1 = anc_bloc,
     stage2 = case_when(
       !is.na(arp_start_bloc) ~ arp_start_bloc,
-      !is.na(anc_bloc)       ~ 'Left Parliament',
+      !is.na(anc_bloc)       ~ 'Leave Office',
       TRUE ~ NA_character_
     ),
     stage3 = arp_end_bloc
@@ -110,7 +111,7 @@ df_long <- mp_stages %>%
 # blocs get a fixed-order categorical palette, largest family first, with
 # a muted extension for the smallest (mostly ANC-only) blocs
 
-status_nodes <- c('Left Parliament', 'Aucun bloc')
+status_nodes <- c('Leave Office', 'Independent')
 
 validated_hues <- c('#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#008300','#4a3aa7','#e34948')
 
@@ -141,7 +142,7 @@ node_colors <- c(main_colors, minor_colors, status_colors)
 
 # force 'Left Parliament' to the bottom of every column it appears in
 
-node_order <- c('Left Parliament', setdiff(unique(na.omit(c(df_long$node, df_long$next_node))), 'Left Parliament'))
+node_order <- c('Leave Office', setdiff(unique(na.omit(c(df_long$node, df_long$next_node))), 'Leave Office'))
 df_long <- df_long %>%
   mutate(node = factor(node, levels = node_order),
          next_node = factor(next_node, levels = node_order))
@@ -151,11 +152,11 @@ p <- ggplot(df_long, aes(x = x, next_x = next_x, node = node, next_node = next_n
   geom_sankey(flow.alpha = 0.6, node.color = 'gray30', show.legend = FALSE) +
   geom_sankey_label(size = 2.8, color = 'black', fill = 'white') +
   scale_fill_manual(values = node_colors) +
-  scale_x_discrete(labels = c('stage1'='ANC Bloc\n(2012-2014)',
-                               'stage2'='ARP Bloc\nStart of Term (2015)',
-                               'stage3'='ARP Bloc\nEnd of Term (2019)')) +
+  scale_x_discrete(labels = c('stage1'='ANC Session\n(2012-2014)',
+                               'stage2'='ARP Session\nStart (2015)',
+                               'stage3'='ARP Session\nEnd (2019)'),
+                              position="top") +
   theme_sankey(base_size = 12) +
-  labs(x = NULL, y = NULL, title = 'MP Bloc Membership Over Time',
-       subtitle = 'Gray nodes are non-partisan states (independent status, leaving parliament)')
+  labs(x = NULL, y = NULL) + theme(axis) + theme(axis.text  =element_text(face="bold"))
 
-ggsave('bloc_sankey.png', plot = p, width = 12, height = 10, dpi = 150)
+ggsave('bloc_sankey.png', plot = p, width = 8, height = 6, dpi = 300)
