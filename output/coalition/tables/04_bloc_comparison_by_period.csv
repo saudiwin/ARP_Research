@@ -1,0 +1,17 @@
+period,bloc,status,n_votes,agree_within_bloc,pct_with_coalition,n_against
+P1_2015-02..2018-09,Nahda,coalition,4160,0.9692,0.9937,26
+P1_2015-02..2018-09,Nidaa Tounes,coalition,4165,0.9646,0.9791,87
+P1_2015-02..2018-09,Union Patriotique Libre,coalition,4138,0.9379,0.9297,284
+P1_2015-02..2018-09,Afek Tounes,coalition,2918,0.9469,0.9007,283
+P1_2015-02..2018-09,Afek Tounes,opposition,776,0.9771,0.8967,79
+P1_2015-02..2018-09,Horra,non_coalition,3149,0.9403,0.8109,591
+P1_2015-02..2018-09,Aucun bloc,independent,4098,0.8265,0.7719,863
+P1_2015-02..2018-09,Social-Démocrate,opposition,3997,0.8449,0.7358,952
+P1_2015-02..2018-09,Front Populaire,opposition,3918,0.8806,0.5312,1750
+P2_2018-10..2019-08,Nahda,coalition,806,0.9792,0.9938,5
+P2_2018-10..2019-08,Tahya Tounes,coalition,806,0.9679,0.9552,36
+P2_2018-10..2019-08,Horra,coalition,805,0.9653,0.939,49
+P2_2018-10..2019-08,Nidaa Tounes,former_governing,806,0.9077,0.8559,115
+P2_2018-10..2019-08,Aucun bloc,independent,745,0.8309,0.7213,182
+P2_2018-10..2019-08,Social-Démocrate,opposition,805,0.8527,0.5667,328
+P2_2018-10..2019-08,Front Populaire,opposition,746,0.8868,0.4757,378

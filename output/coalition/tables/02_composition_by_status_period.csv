@@ -1,0 +1,9 @@
+period,status,n_mp
+P1_2015-02..2018-09,coalition,193
+P1_2015-02..2018-09,independent,63
+P1_2015-02..2018-09,non_coalition,33
+P1_2015-02..2018-09,opposition,45
+P2_2018-10..2019-08,coalition,144
+P2_2018-10..2019-08,former_governing,56
+P2_2018-10..2019-08,independent,49
+P2_2018-10..2019-08,opposition,27

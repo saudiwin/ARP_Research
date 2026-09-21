@@ -1,0 +1,13 @@
+bloc,status,n,pearson_r,spearman_r
+Tahya Tounes,coalition,805,0.27,0.286
+Nahda,coalition,4958,0.219,0.149
+Nidaa Tounes,coalition,4158,0.169,0.079
+Aucun bloc,independent,4835,-0.142,-0.141
+Afek Tounes,opposition,775,0.132,0.118
+Social-Démocrate,opposition,4794,-0.103,-0.107
+Horra,coalition,804,0.079,-0.027
+Horra,non_coalition,3145,0.074,0.016
+Union Patriotique Libre,coalition,4131,0.074,0.052
+Nidaa Tounes,former_governing,805,0.062,0.021
+Front Populaire,opposition,4656,-0.055,-0.055
+Afek Tounes,coalition,2912,0.026,0.043
