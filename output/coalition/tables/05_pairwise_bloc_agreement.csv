@@ -1,0 +1,50 @@
+period,bloc_a,bloc_b,n_shared_votes,pct_agree
+P1_2015-02..2018-09,Nahda,Nidaa Tounes,4152,97.5
+P1_2015-02..2018-09,Nidaa Tounes,Union Patriotique Libre,3821,94.3
+P1_2015-02..2018-09,Nahda,Union Patriotique Libre,3817,94.1
+P1_2015-02..2018-09,Afek Tounes,Nidaa Tounes,2749,92.1
+P1_2015-02..2018-09,Afek Tounes,Union Patriotique Libre,2599,92.1
+P1_2015-02..2018-09,Afek Tounes,Nahda,2744,90.9
+P1_2015-02..2018-09,Horra,Nidaa Tounes,2880,90
+P1_2015-02..2018-09,Horra,Nahda,2880,89.3
+P1_2015-02..2018-09,Afek Tounes,Horra,1828,89.2
+P1_2015-02..2018-09,Horra,Union Patriotique Libre,2601,89
+P1_2015-02..2018-09,Aucun bloc,Horra,2023,88.5
+P1_2015-02..2018-09,Aucun bloc,Union Patriotique Libre,2875,88.1
+P1_2015-02..2018-09,Afek Tounes,Aucun bloc,2054,87.9
+P1_2015-02..2018-09,Aucun bloc,Social-Démocrate,2089,87.7
+P1_2015-02..2018-09,Social-Démocrate,Union Patriotique Libre,2566,86.4
+P1_2015-02..2018-09,Aucun bloc,Nahda,3093,85.4
+P1_2015-02..2018-09,Aucun bloc,Nidaa Tounes,3095,85.2
+P1_2015-02..2018-09,Front Populaire,Social-Démocrate,2250,83.2
+P1_2015-02..2018-09,Afek Tounes,Social-Démocrate,1816,82.5
+P1_2015-02..2018-09,Horra,Social-Démocrate,2001,80.2
+P1_2015-02..2018-09,Nahda,Social-Démocrate,2754,80.2
+P1_2015-02..2018-09,Nidaa Tounes,Social-Démocrate,2752,80
+P1_2015-02..2018-09,Aucun bloc,Front Populaire,2424,77.6
+P1_2015-02..2018-09,Front Populaire,Horra,2238,77.2
+P1_2015-02..2018-09,Afek Tounes,Front Populaire,2040,70.8
+P1_2015-02..2018-09,Front Populaire,Union Patriotique Libre,2873,70
+P1_2015-02..2018-09,Front Populaire,Nidaa Tounes,3113,64.1
+P1_2015-02..2018-09,Front Populaire,Nahda,3112,63.2
+P2_2018-10..2019-08,Horra,Tahya Tounes,776,97.9
+P2_2018-10..2019-08,Horra,Nahda,777,95.6
+P2_2018-10..2019-08,Nahda,Tahya Tounes,803,95.6
+P2_2018-10..2019-08,Aucun bloc,Social-Démocrate,244,92.6
+P2_2018-10..2019-08,Horra,Nidaa Tounes,766,91.9
+P2_2018-10..2019-08,Aucun bloc,Nidaa Tounes,286,91.6
+P2_2018-10..2019-08,Nidaa Tounes,Tahya Tounes,786,90.5
+P2_2018-10..2019-08,Nahda,Nidaa Tounes,789,88.7
+P2_2018-10..2019-08,Aucun bloc,Horra,286,88.5
+P2_2018-10..2019-08,Front Populaire,Social-Démocrate,484,87.4
+P2_2018-10..2019-08,Aucun bloc,Nahda,289,87.2
+P2_2018-10..2019-08,Aucun bloc,Tahya Tounes,288,86.8
+P2_2018-10..2019-08,Nidaa Tounes,Social-Démocrate,611,80.5
+P2_2018-10..2019-08,Aucun bloc,Front Populaire,168,78
+P2_2018-10..2019-08,Horra,Social-Démocrate,599,71.8
+P2_2018-10..2019-08,Social-Démocrate,Tahya Tounes,619,71.6
+P2_2018-10..2019-08,Nahda,Social-Démocrate,620,70.8
+P2_2018-10..2019-08,Front Populaire,Nidaa Tounes,594,65.2
+P2_2018-10..2019-08,Front Populaire,Tahya Tounes,606,58.7
+P2_2018-10..2019-08,Front Populaire,Horra,586,58
+P2_2018-10..2019-08,Front Populaire,Nahda,608,55.4

@@ -15,6 +15,9 @@ sample_fit.rds
 To_Share
 To_Share.zip
 data/estimate_anc_arp_full.rds
+data/estimate_all_ar3_full_rv1.rds
+data/estimate_all_2groups_ar_vb.rds
+marsad_vote_descriptions.csv
 bloc_marginal_effects.jpg
 bloc_sankey.png
 combined_me.pdf
