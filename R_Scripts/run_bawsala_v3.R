@@ -131,7 +131,9 @@ model_type <- 1
   # arp_ideal_data@person_cov <- c(arp_ideal_data@person_cov[1],arp_ideal_data@person_cov[10:17])
   # arp_ideal_data@score_matrix <- select(arp_ideal_data@score_matrix,item_id:change,
   
-  
+# positive restriction on item IDs = votes that Nahda & Nidaa backed
+# negative restriction on item IDs = votes that FP/Independents backed
+
   estimate_all <- id_estimate(arp_ideal_data,
                               use_groups = F,
                               restrict_ind_high=c("554ced8712bdaa5df2537688","569416d212bdaa5ee3796068",
