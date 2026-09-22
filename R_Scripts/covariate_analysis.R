@@ -227,3 +227,4 @@ by_party %>%
         axis.ticks.y=element_blank(),legend.position = "top",legend.title.position = "top")
 
 ggsave("post_carthage_marginal_eff.pdf",width=6,height=4)
+ggsave("post_carthage_marginal_eff.jpg",width=6,height=4)

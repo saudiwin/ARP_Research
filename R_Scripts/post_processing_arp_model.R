@@ -115,9 +115,39 @@ group_id <- mutate(group_id, legis_names=recode(legis_names, !!!name_recode))
 
 # plot & analyze
 
-id_plot_legis_dyn(estimate_all,
-                  group_color=F,person_plot=F,text_size_label=8,use_ci = F,plot_text = F,
-                highlight="Ameur Laraiedh") +
+# id_plot_legis_dyn is only used here to compute the posterior summaries of the
+# trajectories -- the plot itself is rebuilt so that each MP's line is colored
+# by the bloc they belonged to at each time point. This model has no group_id,
+# so bloc is joined in by MP and vote date from the data the model was fit on
+# (MPs switch blocs, both within and across sessions, so a single trajectory
+# can change color). "Mouvement Nahdha" (ANC) and "Nahda" (ARP) are the same
+# party under two spellings
+
+fix_encoding <- function(x) ifelse(validUTF8(x), x, iconv(x, from="latin1", to="UTF-8"))
+
+bloc_by_time <- estimate_all@score_data@func_args$score_data %>%
+  ungroup() %>%
+  distinct(legis_names, law_date, bloc) %>%
+  mutate(bloc=recode(fix_encoding(bloc),
+                     "Mouvement Nahdha"="Nahda",
+                     "Aucun bloc"="Independent"))
+
+anc_arp_traj <- id_plot_legis_dyn(estimate_all,
+                  group_color=F,person_plot=F,use_ci = F,plot_text = F)$data %>%
+  filter(!is.na(person_id)) %>%
+  mutate(person_id=as.character(person_id)) %>%
+  left_join(bloc_by_time, by=c("person_id"="legis_names", "time_id"="law_date")) %>%
+  group_by(person_id) %>%
+  arrange(time_id, .by_group=TRUE) %>%
+  fill(bloc, .direction="downup") %>%
+  ungroup() %>%
+  mutate(bloc=fct_relevel(factor(bloc), "Nahda"))
+
+anc_arp_traj %>%
+  ggplot(aes(x=time_id, y=median_pt, group=person_id)) +
+  geom_line(aes(colour=bloc), alpha=0.4, linewidth=0.5) +
+  geom_line(data=filter(anc_arp_traj, person_id=="Ameur Laraiedh"),
+            colour="black", linewidth=1) +
   labs(y="",x="") +
   geom_vline(aes(xintercept=lubridate::ymd('2016-07-30')),
              linetype=2) +
@@ -129,11 +159,16 @@ id_plot_legis_dyn(estimate_all,
   annotate(geom='text',x=ymd('2013-09-2'),y=0,label='Ameur Laraiedh\n(Nahda Party)',size=3) +
   scale_y_continuous(labels=c('Pro-Islamist','0.0','Pro-Secular'),
                      breaks=c(-12,0.0,12)) +
-  scale_color_discrete(guide='none') + 
+  scale_colour_tableau("Tableau 20", name=NULL) +
+  guides(colour=guide_legend(ncol=3, override.aes=list(alpha=1, linewidth=1.5))) +
   scale_x_date(date_breaks = '1 year',
-               date_labels='%Y')
+               date_labels='%Y') +
+  theme_minimal() +
+  theme(panel.grid=element_blank(),
+        legend.position="bottom",
+        legend.text=element_text(size=7))
 
-ggsave('party_over_time_2groups_1mo_ar.png',width=6,height=4)
+ggsave('party_over_time_2groups_1mo_ar.png',width=6,height=5.5)
 
 # arp_ideal_data <- id_make(score_data = group_id,
 #                           outcome="clean_votes",
@@ -206,8 +241,6 @@ ggsave('party_over_time_2groups_1mo_ar.png',width=6,height=4)
 
   library(tinytable)
 
-  fix_encoding <- function(x) ifelse(validUTF8(x), x, iconv(x, from="latin1", to="UTF-8"))
-
   anc_desc <- distinct(sessc, law_unique) %>%
     transmute(item_id=law_unique, session="ANC",
               description=fix_encoding(law_unique))
@@ -276,8 +309,8 @@ ggsave('party_over_time_2groups_1mo_ar.png',width=6,height=4)
       mutate(pos_med=paste0(round(`Posterior Median`, 2),", (", round(`Low Posterior Interval`,2), ", ",
                                      round(`High Posterior Interval`,2), ")"),
              description=unname(summary_lookup[item_id]),
-            Polarity=case_when(`Posterior Median`>0 & session_label=="ANC"~"Islamist",
-                    `Posterior Median`<0 & session_label=="ANC"~"Secularist",
+            Polarity=case_when(`Posterior Median`<0 & session_label=="ANC"~"Islamist",
+                    `Posterior Median`>0 & session_label=="ANC"~"Secularist",
                       `Posterior Median`>0 & session_label=="ARP"~"Pro-Government",
                     `Posterior Median`<0 & session_label=="ARP"~"Pro-Opposition")) %>%
       select(Vote=description, `Discrimination Score`="pos_med",

@@ -113,6 +113,10 @@ arp_ideal_data <- id_make(score_data = group_id,
                           time_id="law_date",
                           person_cov = ~change*bloc)
 
+
+# positive = most secular parties voted for legislation
+# negative = nahda votes for, other parties against
+
 estimate_all <- id_estimate(arp_ideal_data,
                             restrict_ind_high=c("554ced8712bdaa5df2537688","569416d212bdaa5ee3796068",
                               "59b287314f24d0311313bfff","5ba234a14f24d03ba3d842a2"),
