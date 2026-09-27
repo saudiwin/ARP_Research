@@ -22,30 +22,27 @@ suppressMessages({
 })
 
 # ---- Configuration ----------------------------------------------------------
-
+setwd("D:/study/ARP_Research")
 IN_FILE     <- "data/all_votes.rds"
-OUT_DIR     <- "output/coalition"
+OUT_DIR     <- "output/coalition_new"
 OUT_DETAIL  <- file.path(OUT_DIR, "coalition_vote_bloc_detail.csv")
 OUT_TABLES  <- file.path(OUT_DIR, "tables")
 OUT_FIGURES <- file.path(OUT_DIR, "figures")
 
-# Reuse the project's shared ggplot2 theme (my_theme) so figures match the
-# house style used by the other scripts.
-suppressMessages(source("R_Scripts/Ggplot2_theme.R"))
+# change plot style
 
-# The October 2018 restructuring of the bloc system: UPL dissolved entirely,
-# Tahya Tounes (Coalition nationale) was created, and Nidaa Tounes moved into
-# opposition. Votes before this date are P1, votes on or after it are P2.
-# Set to the exact first sitting day in the data: UPL's last vote was
-# 2018-07-28, parliament then broke for summer recess (no votes at all in
-# August or September), and when it reconvened on 2018-10-02 the same MPs'
-# mp_bloc_name already read Tahya Tounes. This marks the parliamentary bloc
-# restructuring, not the 2018-11-12 cabinet reshuffle / new coalition taking
-# office -- that is an executive-branch event with no footprint in
-# mp_bloc_name at all (Nidaa/Tahya monthly headcounts move smoothly through
-# mid-November with no discontinuity), so it isn't the right anchor for a
-# P1/P2 split defined by parliamentary voting blocs.
-BREAK_DATE <- as.Date("2018-10-02")
+my_theme <- theme_bw(base_size = 14) + theme(
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  strip.background = element_blank(),
+  strip.text       = element_text(face = "bold", size = 14),
+  axis.title       = element_text(face = "bold", size = 12),
+  axis.text.x      = element_text(face = "bold", size = 12),
+  plot.caption     = element_text(size = 11, hjust = 0, face = "italic")
+)
+
+# set break date as the day Carthage Agreement was signed
+BREAK_DATE <- as.Date("2016-07-13")
 
 # Afek Tounes announced its withdrawal from the Carthage Agreement. Uses the
 # announcement date itself (not when MPs actually left the bloc): the data
@@ -72,7 +69,7 @@ VOTE_TYPES <- c("yes", "no", "abstain", "absent_excused", "absent_unexcused")
 # Key dates in the coalition's history, annotated consistently across charts;
 # change them here and every figure picks it up.
 EVENT_DATES  <- as.Date(c("2016-02-01", "2016-07-30", "2018-02-01", "2018-10-01"))
-EVENT_LABELS <- c("Horra split", "Carthage Agreement", "Afek exit", "2018 restructuring")
+EVENT_LABELS <- c("Horra split", "Carthage Agreement", "Afek exit", "Realignment")
 
 
 # ---- Helper functions -------------------------------------------------------
@@ -138,6 +135,7 @@ save_figure <- function(plot, name, width = 8, height = 5) {
 votes <- readRDS(IN_FILE) %>%
   as_tibble() %>%
   mutate(
+    is_final_law_vote = grepl("totalité", vote_title, ignore.case = TRUE),
     bloc   = as.character(mp_bloc_name),
     period = if_else(vote_date < BREAK_DATE,
                      "P1_2015-02..2018-09", "P2_2018-10..2019-08"),
@@ -387,12 +385,65 @@ p_vote_type <- coalition_vote_type %>%
   geom_text(aes(label = paste0(round(pct), "%")),
             position = position_stack(vjust = 0.5), size = 3) +
   scale_fill_brewer(palette = "Set2") +
-  labs(x = NULL, y = "Share (%)", fill = "Vote type",
-       title = "Coalition vote type distribution, by period") +
+  labs(x = NULL, y = "Share (%)", fill = "Vote type") +
   my_theme
 
 save_figure(p_vote_type, "01_coalition_vote_type_by_period", width = 7, height = 5)
 
+#add stacked area plot
+
+coalition_vote_type_monthly <- votes %>%
+  filter(status == "coalition") %>%
+  mutate(ym      = format(vote_date, "%Y-%m"),
+         ym_date = as.Date(paste0(ym, "-01")),
+         carthage_period = if_else(vote_date < BREAK_DATE, "before", "after")) %>%
+  count(carthage_period, ym_date, vote_type, name = "n") %>%
+  group_by(ym_date) %>%
+  mutate(pct = 100 * n / sum(n)) %>%
+  ungroup() %>%
+  mutate(vote_type = factor(vote_type, levels = VOTE_TYPES,
+                            labels = c("Yes","No","Abstain",
+                                       "Absent (excused)","Absent (unexcused)")))
+
+p_vote_type_monthly <- ggplot(coalition_vote_type_monthly,
+                              aes(x = ym_date, y = pct, fill = vote_type,
+                                  group = interaction(vote_type, carthage_period))) +
+  geom_area(position = "stack") +
+  geom_vline(xintercept = BREAK_DATE, linetype = "dashed", color = "grey30") +
+  scale_fill_brewer(palette = "Set2") +
+  labs(x = NULL, y = "Share (%)", fill = NULL,
+       caption = "Dashed line: Carthage Agreement (2016-07-30)") +
+  my_theme
+
+save_figure(p_vote_type_monthly, "01_coalition_vote_type_monthly", width = 10, height = 5)
+
+#add stacked area plot by law
+
+coalition_vote_type_monthly_law <- votes %>%
+  filter(status == "coalition") %>%
+  filter(is_final_law_vote) %>%
+  mutate(ym      = format(vote_date, "%Y-%m"),
+         ym_date = as.Date(paste0(ym, "-01")),
+         carthage_period = if_else(vote_date < BREAK_DATE, "before", "after")) %>%
+  count(carthage_period, ym_date, vote_type, name = "n") %>%
+  group_by(ym_date) %>%
+  mutate(pct = 100 * n / sum(n)) %>%
+  ungroup() %>%
+  mutate(vote_type = factor(vote_type, levels = VOTE_TYPES,
+                            labels = c("Yes","No","Abstain",
+                                       "Absent (excused)","Absent (unexcused)")))
+
+p_vote_type_monthly_law <- ggplot(coalition_vote_type_monthly_law,
+                              aes(x = ym_date, y = pct, fill = vote_type,
+                                  group = interaction(vote_type, carthage_period))) +
+  geom_area(position = "stack") +
+  geom_vline(xintercept = BREAK_DATE, linetype = "dashed", color = "grey30") +
+  scale_fill_brewer(palette = "Set2") +
+  labs(x = NULL, y = "Share (%)", fill = NULL,
+       caption = "Dashed line: Carthage Agreement (2016-07-30)") +
+  my_theme
+
+save_figure(p_vote_type_monthly_law, "01_coalition_vote_type_monthly_law", width = 10, height = 5)
 
 # ---- 9. Descriptives: coalition composition before/after 2018 ---------------
 
@@ -447,7 +498,7 @@ p_composition <- composition_by_month %>%
   geom_vline(xintercept = EVENT_DATES, linetype = "dashed", color = "grey60") +
   scale_x_date(date_breaks = "6 months", date_labels = "%Y-%m") +
   labs(x = NULL, y = "Number of MPs", color = "Political status",
-       title = "Size of each political camp, by month",
+    
        caption = paste0("Dashed lines, left to right: ",
                         paste(paste0(EVENT_LABELS, " (",
                                     format(EVENT_DATES, "%Y-%m"), ")"),
@@ -505,7 +556,7 @@ save_table(tahya_sources, "03_tahya_tounes_sources")
 hdr("5. Agreement within the coalition (headline result)")
 
 vote_level <- vb %>%
-  distinct(vote_id, vote_date, period, pct_agree_within_coalition) %>%
+  distinct(vote_id, vote_date, period, vote_title, pct_agree_within_coalition) %>%
   filter(!is.na(pct_agree_within_coalition))
 
 cat("Agreement within the coalition, by period:\n")
@@ -566,21 +617,29 @@ coalition_deviation <- bloc_comparison %>%
 coalition_deviation %>% show()
 save_table(coalition_deviation, "04_coalition_deviation_events")
 
-# Faceted by period, each panel sorted by its own n_against (scales="free_y"),
-# so Nahda appearing in both periods doesn't tangle the two orderings together
-p_deviation <- ggplot(coalition_deviation,
-                      aes(x = reorder(bloc, n_against), y = n_against)) +
-  geom_col(fill = "steelblue", width = 0.6) +
+#deviation: nahda vs everyone else
+
+coalition_deviation_yearly <- vb %>%
+  filter(status == "coalition", n_present > 0) %>%
+  mutate(year = format(vote_date, "%Y"),
+         bloc_group = if_else(bloc == "Nahda", "Nahda", "Rest of coalition")) %>%
+  group_by(year, bloc_group) %>%
+  summarise(n_votes   = n(),
+            n_against = sum(!follows_coalition, na.rm = TRUE),
+            pct_against = round(100 * n_against / n_votes, 1),
+            .groups = "drop")
+
+p_deviation <- ggplot(coalition_deviation_yearly,
+                      aes(x = year, y = n_against, fill = bloc_group)) +
+  geom_col(position = "dodge", width = 0.6) +
   geom_text(aes(label = paste0(n_against, " (", pct_against, "%)")),
-            hjust = -0.05, size = 3) +
-  facet_wrap(~period, scales = "free_y") +
-  coord_flip(clip = "off") +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.35))) +
-  labs(x = NULL, y = "Number of votes against the coalition majority",
-       title = "How often each coalition member voted against the coalition") +
+            position = position_dodge(width = 0.6), vjust = -0.4, size = 3) +
+  labs(x = NULL, y = "Num. of votes against coalition majority",
+       fill = NULL,
+       caption = "Nahda vs. the rest of the coalition combined") +
   my_theme
 
-save_figure(p_deviation, "04_coalition_deviation_events", width = 9, height = 4.5)
+save_figure(p_deviation, "04_coalition_deviation_events_1", width = 9, height = 4.5)
 
 # Monthly series: computed once here and reused both for this section's
 # headline chart and for the console printout in section 14, instead of
@@ -597,32 +656,94 @@ monthly_agreement <- vote_level %>%
 
 save_table(select(monthly_agreement, -ym_date), "04_coalition_agreement_monthly")
 
+# add monthly abstention rate
+monthly_abstention <- coalition_pos %>%
+  left_join(distinct(votes, vote_id, vote_date, period, vote_title), by = "vote_id") %>%
+  filter(coal_present > 0) %>%
+  mutate(ym      = format(vote_date, "%Y-%m"),
+         ym_date = as.Date(paste0(ym, "-15")),
+         pct_abstain = coal_abstain / coal_present) %>%
+  group_by(period, ym, ym_date) %>%
+  summarise(n_votes      = n(),
+            mean_abstain = round(100 * mean(pct_abstain), 2),
+            .groups = "drop")
+
+monthly_combined <- bind_rows(
+  monthly_agreement  %>% transmute(period, ym, ym_date, series = "Agreement",
+                                   n_votes, value = mean_agree * 100),
+  monthly_abstention %>% transmute(period, ym, ym_date, series = "Abstention",
+                                   n_votes, value = mean_abstain)
+)
+
+
 # Point size is weighted by that month's vote count, so thin-sample months
 # are visibly small dots. group = period breaks the line at the P1/P2
 # boundary instead of drawing one continuous curve across the break.
-p_monthly_agreement <- ggplot(monthly_agreement,
-                              aes(x = ym_date, y = mean_agree, group = period)) +
-  geom_line(color = "steelblue") +
-  geom_point(aes(size = n_votes), color = "steelblue", alpha = 0.7) +
+
+p_monthly_agreement <- ggplot(monthly_combined,
+                              aes(x = ym_date, y = value, color = series, group = interaction(series, period))) +
+  geom_line() +
+  geom_point(aes(size = n_votes),alpha = 0.7) +
   geom_vline(xintercept = EVENT_DATES, linetype = "dashed", color = "grey60") +
   scale_x_date(date_breaks = "6 months", date_labels = "%Y-%m") +
-  scale_y_continuous(limits = c(0, 1),
-                     labels = function(x) paste0(round(100 * x), "%")) +
-  labs(x = NULL, y = "Agreement within coalition (monthly mean)",
-       size = "Votes that month",
-       title = "Agreement within the coalition, by month",
+  labs(x = NULL, y = "Percentage", color = NULL, size = "Votes that month",
        caption = paste0("Dashed lines, left to right: ",
                         paste(paste0(EVENT_LABELS, " (",
-                                    format(EVENT_DATES, "%Y-%m"), ")"),
+                                     format(EVENT_DATES, "%Y-%m"), ")"),
                               collapse = " / "),
-                        "\nP1/P2 are separated by a structural break from the ",
-                        "bloc restructuring; the line does not connect across it")) +
+                        "\nPeriods are separated by a structural break from the ",
+                        "Carthage Agreements; the line does not connect across it")) +
   my_theme +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-save_figure(p_monthly_agreement, "04_coalition_agreement_monthly",
+
+save_figure(p_monthly_agreement, "04_coalition_agreement_monthly_1",
            width = 10, height = 5.5)
 
+#add monthly agree/abstention by law
+
+monthly_agreement_law <- vote_level %>%
+  filter(grepl("totalité", vote_title, ignore.case = TRUE)) %>%
+  mutate(ym = format(vote_date, "%Y-%m"), ym_date = as.Date(paste0(ym, "-15"))) %>%
+  group_by(period, ym, ym_date) %>%
+  summarise(n_votes = n(), mean_agree = round(mean(pct_agree_within_coalition), 4), .groups = "drop")
+
+
+monthly_abstention_law <- coalition_pos %>%
+  left_join(distinct(votes, vote_id, vote_date, period, vote_title), by = "vote_id") %>%
+  filter(coal_present > 0, grepl("totalité", vote_title, ignore.case = TRUE)) %>%
+  mutate(ym = format(vote_date, "%Y-%m"), ym_date = as.Date(paste0(ym, "-15")),
+         pct_abstain = coal_abstain / coal_present) %>%
+  group_by(period, ym, ym_date) %>%
+  summarise(n_votes = n(), mean_abstain = round(100 * mean(pct_abstain), 2), .groups = "drop")
+
+
+monthly_combined_law <- bind_rows(
+  monthly_agreement_law   %>% transmute(period, ym, ym_date, series = "Agreement",
+                                   n_votes, value = mean_agree * 100),
+  monthly_abstention_law  %>% transmute(period, ym, ym_date, series = "Abstention",
+                                   n_votes, value = mean_abstain)
+)
+
+p_monthly_agreement_law <- ggplot(monthly_combined_law,
+                              aes(x = ym_date, y = value, color = series, group = interaction(series, period))) +
+  geom_line() +
+  geom_point(aes(size = n_votes),alpha = 0.7) +
+  geom_vline(xintercept = EVENT_DATES, linetype = "dashed", color = "grey60") +
+  scale_x_date(date_breaks = "6 months", date_labels = "%Y-%m") +
+  labs(x = NULL, y = "Percentage", color = NULL, size = "Votes that month",
+       caption = paste0("Dashed lines, left to right: ",
+                        paste(paste0(EVENT_LABELS, " (",
+                                     format(EVENT_DATES, "%Y-%m"), ")"),
+                              collapse = " / "),
+                        "\nPeriods are separated by a structural break from the ",
+                        "Carthage Agreements; the line does not connect across it")) +
+  my_theme +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+save_figure(p_monthly_agreement_law, "04_coalition_agreement_monthly_law",
+            width = 10, height = 5.5)
 
 # ---- 12. Descriptives: pairwise bloc agreement ------------------------------
 
@@ -668,14 +789,17 @@ p_pairwise <- ggplot(pair_sym, aes(x = bloc_a, y = bloc_b, fill = pct_agree)) +
   geom_tile(color = "white") +
   geom_text(aes(label = round(pct_agree)), size = 3) +
   facet_wrap(~period, scales = "free", ncol = 1) +
-  scale_fill_gradient2(low = "firebrick", mid = "white", high = "steelblue",
-                       midpoint = 75, limits = c(0, 100)) +
-  labs(x = NULL, y = NULL, fill = "Agreement (%)",
-       title = "Pairwise bloc agreement (on yes/no majority positions)") +
+  scale_fill_distiller(
+    palette = "Greens",
+    direction = 1,
+    limits = c(0, 100),
+    na.value = "grey85"
+  )+
+  labs(x = NULL, y = NULL, fill = "Agreement (%)") +
   my_theme +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-save_figure(p_pairwise, "05_pairwise_bloc_agreement", width = 8, height = 11)
+save_figure(p_pairwise, "05_pairwise_bloc_agreement_1", width = 8, height = 11)
 
 
 # ---- 13. Descriptives: how often the coalition voted as one bloc ------------
@@ -735,8 +859,8 @@ p_threshold <- ggplot(threshold_combined,
             position = position_dodge(width = 0.7), vjust = -0.4, size = 3) +
   facet_wrap(~level) +
   scale_y_continuous(limits = c(0, 100), expand = expansion(mult = c(0, 0.12))) +
-  labs(x = "Threshold", y = "Share meeting the threshold (%)", fill = "Period",
-       title = "How often the coalition voted as a single bloc (threshold sensitivity)") +
+  labs(x = "Threshold", y = "Share meeting the threshold (%)", fill = "Period"
+       ) +
   my_theme
 
 save_figure(p_threshold, "06_threshold_frequency", width = 9, height = 5)
