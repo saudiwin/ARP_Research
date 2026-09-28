@@ -33,25 +33,35 @@ suppressMessages({
 })
 
 # ---- Configuration ----------------------------------------------------------
-
+setwd("D:/study/ARP_Research")
 IN_MODEL     <- "data/estimate_all_2groups_ar_vb.rds"
 IN_VOTES     <- "data/all_votes.rds"
 IN_COALITION <- "output/coalition/coalition_vote_bloc_detail.csv"
 
-OUT_DIR      <- "output/discrimination"
+OUT_DIR      <- "output/discrimination_new"
 OUT_DETAIL   <- file.path(OUT_DIR, "bill_discrimination_detail.csv")
 OUT_MERGED   <- file.path(OUT_DIR, "coalition_discrimination_merged.csv")
 OUT_TABLES   <- file.path(OUT_DIR, "tables")
-OUT_FIGURES  <- file.path(OUT_DIR, "figures")
+OUT_FIGURES  <- file.path(OUT_DIR, "figures_new")
 
-# Reuse the project's shared ggplot2 theme
-suppressMessages(source("R_Scripts/Ggplot2_theme.R"))
+my_theme <- theme_bw(base_size = 14) + theme(
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  strip.background = element_blank(),
+  strip.text       = element_text(face = "bold", size = 14),
+  axis.title       = element_text(face = "bold", size = 12),
+  axis.text.x      = element_text(face = "bold", size = 12),
+  plot.caption     = element_text(size = 11, hjust = 0, face = "italic")
+)
 
 # ANC/ARP legislature boundary, taken from run_bawsala_combine_session.R's own
 # convention (change = law_date > 2014-12-02). This is a different date from
 # the 2018 bloc-restructuring BREAK_DATE in the coalition script -- don't
 # confuse the two.
 LEGISLATURE_BREAK <- as.Date("2014-12-02")
+
+# set break date as the day Carthage Agreement was signed
+BREAK_DATE <- as.Date("2016-07-13")
 
 # The 8 identification-constraint items hardcoded in id_estimate() (see
 # run_bawsala_combine_session.R's restrict_ind_high / restrict_ind_low).
@@ -168,9 +178,11 @@ item_discrim <- left_join(item_discrim, item_dates, by = "item_id") %>%
   mutate(
     abs_discrimination = abs(discrimination),
     legislature        = if_else(law_date > LEGISLATURE_BREAK, "ARP", "ANC"),
+    carthage_period = factor(if_else(law_date > BREAK_DATE, "After Carthage", "Before Carthage"),
+                             levels = c("Before Carthage", "After Carthage")),
     is_anchor          = as.character(item_id) %in% ANCHOR_ITEM_IDS
   ) %>%
-  select(item_id, legislature, law_date, n_dates_resolved,
+  select(item_id, legislature,carthage_period, law_date, n_dates_resolved,
          discrimination, abs_discrimination, discrimination_median,
          ci_width, rhat, is_anchor) %>%
   arrange(law_date)
@@ -243,7 +255,7 @@ hdr("2. Discrimination distribution, overall and ANC vs ARP")
 
 discrim_by_legislature <- item_discrim %>%
   filter(!is_anchor) %>%
-  group_by(legislature) %>%
+  group_by( carthage_period) %>%
   summarise(n      = n(),
             mean   = round(mean(abs_discrimination), 4),
             median = round(median(abs_discrimination), 4),
@@ -258,15 +270,15 @@ save_table(discrim_by_legislature, "01_discrimination_by_legislature")
 
 p_dist <- item_discrim %>%
   filter(!is_anchor) %>%
-  ggplot(aes(x = legislature, y = abs_discrimination, fill = legislature)) +
+  ggplot(aes(x =  carthage_period, y = abs_discrimination, fill =  carthage_period)) +
   geom_violin(alpha = 0.6, trim = FALSE) +
   geom_boxplot(width = 0.12, outlier.size = 0.6) +
-  labs(x = NULL, y = "|Discrimination|", fill = NULL,
-       title = "Distribution of bill discrimination, ANC vs ARP") +
+  labs(x = NULL, y = "Discrimination", fill = NULL
+      ) +
   my_theme +
   theme(legend.position = "none")
 
-save_figure(p_dist, "01_discrimination_by_legislature", width = 6, height = 5)
+save_figure(p_dist, "01_discrimination_by_legislature_1", width = 6, height = 5)
 
 
 # ---- 7. Descriptives: yearly trend (headline view) ---------------------------
@@ -276,7 +288,7 @@ hdr("3. Discrimination over time, by year (headline view)")
 discrim_yearly <- item_discrim %>%
   filter(!is_anchor) %>%
   mutate(year = as.integer(format(law_date, "%Y"))) %>%
-  group_by(year, legislature) %>%
+  group_by(year,  carthage_period) %>%
   summarise(n = n(),
             mean_abs = round(mean(abs_discrimination), 4),
             sd_abs   = round(sd(abs_discrimination), 4),
@@ -288,18 +300,18 @@ cat("read the mean alongside n:\n\n")
 discrim_yearly %>% show()
 save_table(discrim_yearly, "02_discrimination_yearly")
 
-p_yearly <- ggplot(discrim_yearly, aes(x = year, y = mean_abs, fill = legislature)) +
-  geom_col(width = 0.6) +
+pd <- position_dodge(width = 0.7)
+
+p_yearly <- ggplot(discrim_yearly, aes(x = year, y = mean_abs, fill = carthage_period)) +
+  geom_col(width = 0.6, position = pd) +
   geom_errorbar(aes(ymin = pmax(mean_abs - sd_abs, 0), ymax = mean_abs + sd_abs),
-                width = 0.2) +
-  geom_text(aes(label = n), vjust = -1.2, size = 3) +
-  scale_x_continuous(breaks = discrim_yearly$year) +
-  labs(x = NULL, y = "Mean |discrimination|", fill = "Legislature",
-       title = "Average bill discrimination by year",
+                width = 0.2, position = pd) +
+  geom_text(aes(y = mean_abs + sd_abs, label = n), vjust = -0.5, size = 3, position = pd) +
+  scale_x_continuous(breaks = unique(discrim_yearly$year)) +
+  labs(x = NULL, y = "Mean of discrimination", fill = NULL,
        caption = "Numbers above bars are item counts; error bars are +/- 1 SD") +
   my_theme
-
-save_figure(p_yearly, "02_discrimination_yearly", width = 8, height = 5)
+save_figure(p_yearly, "02_discrimination_yearly_1", width = 8, height = 5)
 
 
 # ---- 8. Descriptives: monthly trend (supporting detail) ----------------------
@@ -308,31 +320,24 @@ hdr("4. Discrimination over time, by month (supporting detail)")
 
 discrim_monthly <- item_discrim %>%
   filter(!is_anchor) %>%
-  mutate(ym      = format(law_date, "%Y-%m"),
+  mutate(ym = format(law_date, "%Y-%m"),
          ym_date = as.Date(paste0(ym, "-01"))) %>%
-  group_by(legislature, ym, ym_date) %>%
-  summarise(n = n(), mean_abs = round(mean(abs_discrimination), 4),
-            .groups = "drop") %>%
+  group_by(legislature, carthage_period, ym, ym_date) %>%   # 两列都要
+  summarise(n = n(), mean_abs = round(mean(abs_discrimination), 4), .groups = "drop") %>%
   arrange(ym)
 
-cat("Months with few items are noisy; read n alongside the mean.\n")
-cat("ANC and ARP are separated by a real ~4-month changeover gap\n")
-cat("(2014-10 to 2015-02) -- the line does not connect across it.\n\n")
-
-save_table(select(discrim_monthly, -ym_date), "02_discrimination_monthly")
-
 p_monthly <- ggplot(discrim_monthly,
-                    aes(x = ym_date, y = mean_abs, group = legislature,
-                        color = legislature)) +
+                    aes(x = ym_date, y = mean_abs,
+                        group = interaction(legislature, carthage_period),
+                        color = carthage_period)) +
   geom_line() +
   geom_point(aes(size = n), alpha = 0.7) +
+  geom_vline(xintercept = BREAK_DATE, linetype = "dashed", color = "grey60") +
   scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
-  labs(x = NULL, y = "Mean |discrimination| (monthly)",
-       color = "Legislature", size = "Items that month",
-       title = "Average bill discrimination by month") +
+  labs(x = NULL, y = "Mean of discrimination| (monthly)", color = NULL, size = "Items that month") +
   my_theme
 
-save_figure(p_monthly, "02_discrimination_monthly", width = 10, height = 5)
+save_figure(p_monthly, "02_discrimination_monthly_1", width = 10, height = 5)
 
 
 # ---- 9. Descriptives: most/least discriminating bills (anchors excluded) -----
